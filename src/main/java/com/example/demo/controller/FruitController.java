@@ -5,8 +5,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.HashMap;
+import java.util.Map;
 
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -16,8 +22,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.demo.dto.FruitDTO;
 import com.example.demo.entity.Fruit;
 import com.example.demo.service.FruitService;
 
@@ -32,13 +40,12 @@ public class FruitController {
 
 	// 画像保存先ディレクトリ
 	private final String uploadDir = "src/main/resources/static/images";
+	private final Path uploadPath = Paths.get(uploadDir);
 
 	/**
 	 * 商品一覧画面表示
 	 *
-	 * 処理概要：
-	 * ① キーワードによる商品検索
-	 * ② 一覧画面へ表示
+	 * 処理概要： ① キーワードによる商品検索 ② 一覧画面へ表示
 	 */
 	@GetMapping
 	public String list(
@@ -53,9 +60,7 @@ public class FruitController {
 	/**
 	 * 商品登録画面表示
 	 *
-	 * 処理概要：
-	 * ① 空のFruitオブジェクトを作成
-	 * ② 登録画面へ表示
+	 * 処理概要： ① 空のFruitオブジェクトを作成 ② 登録画面へ表示
 	 */
 	@GetMapping("/add")
 	public String addForm(Model model) {
@@ -66,59 +71,61 @@ public class FruitController {
 	/**
 	 * 商品登録処理
 	 *
-	 * 処理概要：
-	 * ① 入力情報取得
-	 * ② 画像アップロード(任意)
-	 * ③ DB登録
-	 * ④ 一覧画面へリダイレクト
+	 * 処理概要： ① 入力情報取得 ② 画像アップロード(任意) ③ DB登録 ④ 一覧画面へリダイレクト
 	 */
 	@PostMapping("/save")
-	public String save(
-			@Valid @ModelAttribute Fruit fruit,
+	@ResponseBody
+	public ResponseEntity<?> save(
+			@Valid @ModelAttribute FruitDTO fruitDTO,
 			BindingResult bindingResult,
-			@RequestParam(required = false) MultipartFile imageFile,
-			Model model) throws IOException {
+			@RequestParam(required = false) MultipartFile imageFile)
+			throws IOException {
 
-		// バリデーションエラー
+		Map<String, String> errors = new HashMap<>();
+
 		if (bindingResult.hasErrors()) {
-			return "fruit/form";
+			bindingResult.getFieldErrors().forEach(error -> {
+				errors.put(
+						error.getField(),
+						error.getDefaultMessage());
+			});
 		}
 
-		// 画像アップロード処理
-		if (imageFile != null && !imageFile.isEmpty()) {
-			String fileName = System.currentTimeMillis()
-					+ "_"
-					+ imageFile.getOriginalFilename();
-			Path uploadPath = Paths.get(uploadDir);
-
-			// 保存先フォルダが存在しない場合は作成
-			if (!Files.exists(uploadPath)) {
-				Files.createDirectories(uploadPath);
-			}
-
-			// 画像保存
-			Path filePath = uploadPath.resolve(fileName);
-			Files.copy(
-					imageFile.getInputStream(),
-					filePath,
-					StandardCopyOption.REPLACE_EXISTING);
-			fruit.setImageUrl(
-					"/images/" + fileName);
+		// kiểm tra ảnh
+		if (imageFile == null || imageFile.isEmpty()) {
+			errors.put("imageFile", "画像を選択してください。");
 		}
 
-		// DB登録
+		// nếu có bất kỳ lỗi nào
+		if (!errors.isEmpty()) {
+			return ResponseEntity.badRequest().body(errors);
+		}
+
+		// 画像保存
+		String fileName = Paths.get(imageFile.getOriginalFilename()).getFileName().toString();
+		Path filePath = uploadPath.resolve(fileName);
+		Files.copy(
+				imageFile.getInputStream(),
+				filePath,
+				StandardCopyOption.REPLACE_EXISTING);
+		String imageUrl = "/images/" + fileName;
+
+		// DB登録: DTO -> Entity に変換して保存
+		Fruit fruit = new Fruit();
+		BeanUtils.copyProperties(fruitDTO, fruit);
+		fruit.setImageUrl(imageUrl);
 		fruitService.save(fruit);
 
 		// 一覧画面へ遷移
-		return "redirect:/fruits";
+		return ResponseEntity.status(HttpStatus.FOUND)
+				.header(HttpHeaders.LOCATION, "/fruits")
+				.build();
 	}
 
 	/**
 	 * 商品編集画面表示
 	 *
-	 * 処理概要：
-	 * ① IDから商品取得
-	 * ② 編集画面へ表示
+	 * 処理概要： ① IDから商品取得 ② 編集画面へ表示
 	 */
 	@GetMapping("/edit/{id}")
 	public String edit(
@@ -131,58 +138,44 @@ public class FruitController {
 		return "fruit-form";
 	}
 
-	/**
-	 * 商品更新処理
-	 *
-	 * 処理概要：
-	 * ① 入力情報取得
-	 * ② 画像アップロード(任意)
-	 * ③ DB更新
-	 * ④ 一覧画面へリダイレクト
-	 */
 	@PostMapping("/update")
 	public String update(
-			@ModelAttribute Fruit fruit,
-			@RequestParam(required = false) MultipartFile imageFile)
-			throws IOException {
+			@Valid @ModelAttribute FruitDTO fruitDTO,
+			BindingResult bindingResult,
+			@RequestParam(required = false) MultipartFile imageFile,
+			Model model) throws IOException {
+		if (bindingResult.hasErrors()) {
+			model.addAttribute("fruit", fruitDTO);
+			return "fruit-form";
+		}
 
-		// DBから既存データ取得
-		Fruit oldFruit = fruitService.getById(fruit.getId());
-
-		// 新しい画像が選択された場合
+		String imageUrl = null;
 		if (imageFile != null && !imageFile.isEmpty()) {
-			String fileName = System.currentTimeMillis()
-					+ "_"
-					+ imageFile.getOriginalFilename();
-			Path uploadPath = Paths.get(uploadDir);
-
 			if (!Files.exists(uploadPath)) {
 				Files.createDirectories(uploadPath);
 			}
+
+			String fileName = Paths.get(imageFile.getOriginalFilename())
+					.getFileName().toString();
 			Path filePath = uploadPath.resolve(fileName);
-			Files.copy(
-					imageFile.getInputStream(),
-					filePath,
+			Files.copy(imageFile.getInputStream(), filePath,
 					StandardCopyOption.REPLACE_EXISTING);
-			fruit.setImageUrl("/images/" + fileName);
-		} else {
-			// 画像未変更の場合は既存画像を保持
-			fruit.setImageUrl(
-					oldFruit.getImageUrl());
+			imageUrl = "/images/" + fileName;
 		}
-		fruitService.update(
-				fruit.getId(),
-				fruit);
+
+		Fruit fruit = new Fruit();
+		BeanUtils.copyProperties(fruitDTO, fruit);
+		if (imageUrl != null) {
+			fruit.setImageUrl(imageUrl);
+		}
+		fruitService.save(fruit);
 		return "redirect:/fruits";
 	}
 
 	/**
 	 * 商品削除処理
 	 *
-	 * 処理概要：
-	 * ① 商品ID取得
-	 * ② DB削除
-	 * ③ 一覧画面へリダイレクト
+	 * 処理概要： ① 商品ID取得 ② DB削除 ③ 一覧画面へリダイレクト
 	 */
 	@GetMapping("/delete/{id}")
 	public String delete(

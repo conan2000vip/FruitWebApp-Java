@@ -1,165 +1,144 @@
 <!doctype html>
 <html xmlns:th="http://www.thymeleaf.org">
-  <head>
-    <meta charset="UTF-8" />
-    <title>商品管理</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}" />
-  </head>
 
-  <body>
-    <header>
-      <h1>フルーツ販売ショップ</h1>
-      <nav class="nav-box">
-        <a href="/" class="nav-item"><span class="icon">🏠</span> HOME</a>
-        <a href="/fruits" class="nav-item">商品管理</a>
-        <a href="/admin" class="nav-item"><span class="icon">👤</span> Admin</a>
-      </nav>
-    </header>
+<head>
+  <meta charset="UTF-8" />
+  <title>商品管理</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}" />
+</head>
 
-    <!-- Toolbar -->
-    <section class="toolbar">
-      <div class="search-area">
-        <input type="text" placeholder="商品を探す" />
-      </div>
-      <div class="filter-area">
-        <select>
-          <option>全部</option>
-          <option>南部</option>
-          <option>北部</option>
-          <option>中部</option>
-        </select>
-        <button type="button" class="add-btn" onclick="openAddForm()">
-          商品追加
-        </button>
-      </div>
-    </section>
+<body>
+  <header>
+    <h1>フルーツ販売ショップ</h1>
+    <nav class="nav-box">
+      <a href="/" class="nav-item"><span class="icon">🏠</span> HOME</a>
+      <a href="/fruits" class="nav-item">商品管理</a>
+      <a href="/admin" class="nav-item"><span class="icon">👤</span> Admin</a>
+    </nav>
+  </header>
 
-    <!-- Product List -->
-    <main>
-      <h2 class="section-title">商品一覧</h2>
-      <div class="product-grid">
-        <div class="product-card" th:each="fruit : ${fruits}">
-          <img th:src="@{${fruit.imageUrl}}" class="product-img" />
+  <!-- Toolbar -->
+  <section class="toolbar">
+    <div class="search-area">
+      <input type="text" placeholder="商品を探す" />
+    </div>
+    <div class="filter-area">
+      <select>
+        <option>全部</option>
+        <option>南部</option>
+        <option>北部</option>
+        <option>中部</option>
+      </select>
+      <button type="button" class="add-btn" onclick="openAddForm()">
+        商品追加
+      </button>
+    </div>
+  </section>
 
-          <h3 th:text="${fruit.name}"></h3>
-          <p>価格: <span th:text="${fruit.price}"></span> 円</p>
-          <p>地域: <span th:text="${fruit.region}"></span></p>
-          <p th:text="${fruit.description}"></p>
-          <p th:text="${fruit.quantity > 0 ? '在庫あり' : '在庫なし'}"></p>
+  <!-- Product List -->
+  <main>
+    <h2 class="section-title">商品一覧</h2>
+    <div class="product-grid">
+      <div class="product-card" th:each="fruit : ${fruits}">
+        <img th:src="@{${fruit.imageUrl}}" class="product-img" />
 
-          <div class="actions">
-            <!-- Delete -->
-            <button
-              type="button"
-              class="btn btn-danger delete-btn"
-              th:data-id="${fruit.id}"
-            >
-              削除
-            </button>
+        <h3 th:text="${fruit.name}"></h3>
+        <p>価格: <span th:text="${fruit.price}"></span> 円</p>
+        <p>地域: <span th:text="${fruit.region}"></span></p>
+        <p th:text="${fruit.description}"></p>
+        <p th:text="${fruit.quantity > 0 ? '在庫あり' : '在庫なし'}"></p>
 
-            <!-- Edit -->
-            <button
-              type="button"
-              class="btn btn-primary"
-              th:data-id="${fruit.id}"
-              th:data-name="${fruit.name}"
-              th:data-region="${fruit.region}"
-              th:data-price="${fruit.price}"
-              th:data-quantity="${fruit.quantity}"
-              th:data-description="${fruit.description}"
-              th:data-imageurl="${fruit.imageUrl}"
-              onclick="openEditForm(this)"
-            >
-              編集
-            </button>
-          </div>
-        </div>
-      </div>
-    </main>
+        <div class="actions">
+          <!-- Delete -->
+          <button type="button" class="btn btn-danger delete-btn" th:data-id="${fruit.id}">
+            削除
+          </button>
 
-    <!-- Popup -->
-    <div id="confirmDialog" class="confirm-overlay">
-      <div class="confirm-box">
-        <button class="close-btn" onclick="closeConfirmDialog()">×</button>
-        <div class="icon-circle">!</div>
-        <h3>商品を削除しますか？</h3>
-        <p>この操作は元に戻せません。</p>
-        <div class="confirm-actions">
-          <button id="confirmNo" class="btn-cancel">キャンセル</button>
-          <button id="confirmYes" class="btn-ok">OK</button>
+          <!-- Edit -->
+          <button type="button" class="btn btn-primary" th:data-id="${fruit.id}" th:data-name="${fruit.name}"
+            th:data-region="${fruit.region}" th:data-price="${fruit.price}" th:data-quantity="${fruit.quantity}"
+            th:data-description="${fruit.description}" th:data-imageurl="${fruit.imageUrl}"
+            onclick="openEditForm(this)">
+            編集
+          </button>
         </div>
       </div>
     </div>
+  </main>
 
-    <!-- 商品登録・編集モーダル -->
-    <div id="fruitFormModal" class="modal-overlay">
-      <div class="modal-box">
-        <button class="modal-close" onclick="closeFruitForm()">×</button>
-
-        <h3 id="modalTitle">商品登録</h3>
-
-        <form id="fruitForm" class="modal-form" enctype="multipart/form-data">
-          <input type="hidden" id="fruitId" />
-
-          <label
-            >果物名＊
-            <span id="fruitNameError" class="error-message"></span>
-          </label>
-          <input type="text" id="fruitName" placeholder="果物名を入力" />
-
-          <label>地域＊</label>
-          <span id="fruitRegionError" class="error-message"></span>
-          <div class="region-options">
-            <label><input type="radio" name="region" value="北部" /> 北部</label>
-            <label><input type="radio" name="region" value="南部" /> 南部</label>
-            <label><input type="radio" name="region" value="中部" /> 中部</label>
-          </div>
-
-          <label
-            >販売価格＊
-            <span id="fruitPriceError" class="error-message"></span>
-          </label>
-          <input type="number" id="fruitPrice" placeholder="価格を入力" />
-
-          <label
-            >在庫量＊
-            <span id="fruitQuantityError" class="error-message"></span>
-          </label>
-          <input type="number" id="fruitQuantity" placeholder="数量を入力" />
-
-          <label
-            >商品画像＊
-            <span id="fruitImageError" class="error-message"></span>
-          </label>
-          <div class="image-upload-area">
-            <input type="file" id="fruitImage" />
-          </div>
-          <img
-            id="previewImg"
-            style="max-width: 100%; margin-top: 10px; display: none"
-          />
-
-          <label>説明</label>
-          <textarea
-            id="fruitDescription"
-            rows="3"
-            placeholder="果物の説明を入力"
-          ></textarea>
-          <!-- <span id="fruitDescriptionError" class="error-message"></span> -->
-
-          <div class="modal-actions">
-            <button type="button" class="btn-save" onclick="saveFruit()">
-              保存
-            </button>
-            <button type="button" class="btn-cancel" onclick="closeFruitForm()">
-              キャンセル
-            </button>
-          </div>
-        </form>
+  <!-- Popup -->
+  <div id="confirmDialog" class="confirm-overlay">
+    <div class="confirm-box">
+      <button class="close-btn" onclick="closeConfirmDialog()">×</button>
+      <div class="icon-circle">!</div>
+      <h3>商品を削除しますか？</h3>
+      <p>この操作は元に戻せません。</p>
+      <div class="confirm-actions">
+        <button id="confirmNo" class="btn-cancel">キャンセル</button>
+        <button id="confirmYes" class="btn-ok">OK</button>
       </div>
     </div>
+  </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script th:src="@{/js/main.js}"></script>
-  </body>
+  <!-- 商品登録・編集モーダル -->
+  <div id="fruitFormModal" class="modal-overlay">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeFruitForm()">×</button>
+
+      <h3 id="modalTitle">商品登録</h3>
+
+      <form id="fruitForm" action="/fruits/save" class="modal-form" enctype="multipart/form-data">
+        <input type="hidden" id="fruitId" />
+
+        <label>果物名＊
+          <span id="fruitNameError" class="error-message"></span>
+        </label>
+        <input type="text" id="fruitName" placeholder="果物名を入力" />
+
+        <label>地域＊</label>
+        <span id="fruitRegionError" class="error-message"></span>
+        <div class="region-options">
+          <label><input type="radio" name="region" value="北部" /> 北部</label>
+          <label><input type="radio" name="region" value="南部" /> 南部</label>
+          <label><input type="radio" name="region" value="中部" /> 中部</label>
+        </div>
+
+        <label>販売価格＊
+          <span id="fruitPriceError" class="error-message"></span>
+        </label>
+        <input type="number" id="fruitPrice" placeholder="価格を入力" />
+
+        <label>在庫量＊
+          <span id="fruitQuantityError" class="error-message"></span>
+        </label>
+        <input type="number" id="fruitQuantity" placeholder="数量を入力" />
+
+        <label>商品画像＊
+          <span id="fruitImageError" class="error-message"></span>
+        </label>
+        <div class="image-upload-area">
+          <input type="file" id="fruitImage" />
+        </div>
+        <img id="previewImg" style="max-width: 100%; margin-top: 10px; display: none" />
+
+        <label>説明</label>
+        <textarea id="fruitDescription" rows="3" placeholder="果物の説明を入力"></textarea>
+        <!-- <span id="fruitDescriptionError" class="error-message"></span> -->
+
+        <div class="modal-actions">
+          <button type="button" class="btn-save" onclick="saveFruit()">
+            保存
+          </button>
+          <button type="button" class="btn-cancel" onclick="closeFruitForm()">
+            キャンセル
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script th:src="@{/js/main.js}"></script>
+</body>
+
 </html>
