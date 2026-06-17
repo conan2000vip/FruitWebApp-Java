@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
+import java.util.Objects;
 import java.util.Map;
 
 import org.springframework.beans.BeanUtils;
@@ -91,23 +92,29 @@ public class FruitController {
 			});
 		}
 
-		// kiểm tra ảnh
+		// 画像ファイルが選択されていない場合のエラーメッセージを追加
 		if (imageFile == null || imageFile.isEmpty()) {
 			errors.put("imageFile", "画像を選択してください。");
 		}
 
-		// nếu có bất kỳ lỗi nào
+		// バリデーションエラーがある場合は、エラーメッセージを返す
 		if (!errors.isEmpty()) {
 			return ResponseEntity.badRequest().body(errors);
 		}
 
 		// 画像保存
-		String fileName = Paths.get(imageFile.getOriginalFilename()).getFileName().toString();
+		if (!Files.exists(uploadPath)) {
+			Files.createDirectories(uploadPath);
+		}
+
+		// 画像ファイルが選択されている場合のみ保存処理を行う
+		MultipartFile file = Objects.requireNonNull(imageFile);
+		String fileName = Paths.get(file.getOriginalFilename()).getFileName().toString();
 		Path filePath = uploadPath.resolve(fileName);
 		Files.copy(
-				imageFile.getInputStream(),
-				filePath,
-				StandardCopyOption.REPLACE_EXISTING);
+			file.getInputStream(),
+			filePath,
+			StandardCopyOption.REPLACE_EXISTING);
 		String imageUrl = "/images/" + fileName;
 
 		// DB登録: DTO -> Entity に変換して保存
@@ -128,49 +135,79 @@ public class FruitController {
 	 * 処理概要： ① IDから商品取得 ② 編集画面へ表示
 	 */
 	@GetMapping("/edit/{id}")
-	public String edit(
+	public String editForm(
 			@PathVariable Long id,
 			Model model) {
 		Fruit fruit = fruitService.getById(id);
-		model.addAttribute(
-				"fruit",
-				fruit);
-		return "fruit-form";
+		if (fruit == null) {
+			return "redirect:/fruits";
+		}
+		model.addAttribute("fruit", fruit);
+		return "fruit/form";
 	}
 
 	@PostMapping("/update")
-	public String update(
-			@Valid @ModelAttribute FruitDTO fruitDTO,
-			BindingResult bindingResult,
-			@RequestParam(required = false) MultipartFile imageFile,
-			Model model) throws IOException {
-		if (bindingResult.hasErrors()) {
-			model.addAttribute("fruit", fruitDTO);
-			return "fruit-form";
-		}
+@ResponseBody
+public ResponseEntity<?> update(
+        @Valid @ModelAttribute FruitDTO fruitDTO,
+        BindingResult bindingResult,
+        @RequestParam(required = false) MultipartFile imageFile
+) throws IOException {
 
-		String imageUrl = null;
-		if (imageFile != null && !imageFile.isEmpty()) {
-			if (!Files.exists(uploadPath)) {
-				Files.createDirectories(uploadPath);
-			}
+    if (bindingResult.hasErrors()) {
+        Map<String, String> errors = new HashMap<>();
 
-			String fileName = Paths.get(imageFile.getOriginalFilename())
-					.getFileName().toString();
-			Path filePath = uploadPath.resolve(fileName);
-			Files.copy(imageFile.getInputStream(), filePath,
-					StandardCopyOption.REPLACE_EXISTING);
-			imageUrl = "/images/" + fileName;
-		}
+        bindingResult.getFieldErrors().forEach(error -> {
+            errors.put(error.getField(), error.getDefaultMessage());
+        });
 
-		Fruit fruit = new Fruit();
-		BeanUtils.copyProperties(fruitDTO, fruit);
-		if (imageUrl != null) {
-			fruit.setImageUrl(imageUrl);
-		}
-		fruitService.save(fruit);
-		return "redirect:/fruits";
-	}
+        return ResponseEntity.badRequest().body(errors);
+    }
+
+    // 更新の場合は、必ずDBから既存データを取得する
+    Fruit fruit = fruitService.getById(fruitDTO.getId());
+
+    if (fruit == null) {
+        Map<String, String> errors = new HashMap<>();
+        errors.put("id", "商品が見つかりません。");
+        return ResponseEntity.badRequest().body(errors);
+    }
+
+    // 画像以外の情報だけ更新する
+    fruit.setName(fruitDTO.getName());
+    fruit.setRegion(fruitDTO.getRegion());
+    fruit.setPrice(fruitDTO.getPrice());
+    fruit.setQuantity(fruitDTO.getQuantity());
+    fruit.setDescription(fruitDTO.getDescription());
+
+    // 新しい画像が選択された場合だけ画像を更新する
+    if (imageFile != null && !imageFile.isEmpty()) {
+        if (!Files.exists(uploadPath)) {
+            Files.createDirectories(uploadPath);
+        }
+
+        String fileName = Paths.get(imageFile.getOriginalFilename())
+                .getFileName()
+                .toString();
+
+        Path filePath = uploadPath.resolve(fileName);
+
+        Files.copy(
+                imageFile.getInputStream(),
+                filePath,
+                StandardCopyOption.REPLACE_EXISTING
+        );
+
+        fruit.setImageUrl("/images/" + fileName);
+    }
+
+    // 画像を選択していない場合は fruit.setImageUrl() を呼ばない
+    // つまりDBにある古い画像URLをそのまま残す
+
+    fruitService.save(fruit);
+
+    return ResponseEntity.ok("OK");
+}
 
 	/**
 	 * 商品削除処理

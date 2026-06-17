@@ -49,16 +49,21 @@
         <p th:text="${fruit.quantity > 0 ? '在庫あり' : '在庫なし'}"></p>
 
         <div class="actions">
-          <!-- Delete -->
           <button type="button" class="btn btn-danger delete-btn" th:data-id="${fruit.id}">
             削除
           </button>
-
-          <!-- Edit -->
-          <button type="button" class="btn btn-primary" th:data-id="${fruit.id}" th:data-name="${fruit.name}"
-            th:data-region="${fruit.region}" th:data-price="${fruit.price}" th:data-quantity="${fruit.quantity}"
-            th:data-description="${fruit.description}" th:data-imageurl="${fruit.imageUrl}"
-            onclick="openEditForm(this)">
+          <button
+            type="button"
+            class="btn btn-primary"
+            th:data-id="${fruit.id}"
+            th:data-name="${fruit.name}"
+            th:data-region="${fruit.region}"
+            th:data-price="${fruit.price}"
+            th:data-quantity="${fruit.quantity}"
+            th:data-description="${fruit.description}"
+            th:data-image-url="${fruit.imageUrl}"
+            onclick="openEditForm(this)"
+          >
             編集
           </button>
         </div>
@@ -66,7 +71,7 @@
     </div>
   </main>
 
-  <!-- Popup -->
+  <!-- Delete confirmation dialog -->
   <div id="confirmDialog" class="confirm-overlay">
     <div class="confirm-box">
       <button class="close-btn" onclick="closeConfirmDialog()">×</button>
@@ -87,13 +92,20 @@
 
       <h3 id="modalTitle">商品登録</h3>
 
-      <form id="fruitForm" action="/fruits/save" class="modal-form" enctype="multipart/form-data">
-        <input type="hidden" id="fruitId" />
+      <form
+        id="fruitForm"
+        action="/fruits/save"
+        class="modal-form"
+        enctype="multipart/form-data"
+      >
+        <input type="hidden" id="fruitId" name="id" />
+        <input type="hidden" id="currentImageUrl" name="currentImageUrl" />
 
-        <label>果物名＊
+        <label>
+          果物名＊
           <span id="fruitNameError" class="error-message"></span>
         </label>
-        <input type="text" id="fruitName" placeholder="果物名を入力" />
+        <input type="text" id="fruitName" name="name" placeholder="果物名を入力" />
 
         <label>地域＊</label>
         <span id="fruitRegionError" class="error-message"></span>
@@ -103,27 +115,37 @@
           <label><input type="radio" name="region" value="中部" /> 中部</label>
         </div>
 
-        <label>販売価格＊
+        <label>
+          販売価格＊
           <span id="fruitPriceError" class="error-message"></span>
         </label>
-        <input type="number" id="fruitPrice" placeholder="価格を入力" />
+        <input type="number" id="fruitPrice" name="price" placeholder="価格を入力" />
 
-        <label>在庫量＊
+        <label>
+          在庫量＊
           <span id="fruitQuantityError" class="error-message"></span>
         </label>
-        <input type="number" id="fruitQuantity" placeholder="数量を入力" />
+        <input type="number" id="fruitQuantity" name="quantity" placeholder="数量を入力" />
 
-        <label>商品画像＊
+        <label>
+          商品画像＊
           <span id="fruitImageError" class="error-message"></span>
         </label>
         <div class="image-upload-area">
-          <input type="file" id="fruitImage" />
+          <input type="file" id="fruitImage" name="imageFile" />
         </div>
-        <img id="previewImg" style="max-width: 100%; margin-top: 10px; display: none" />
+        <img
+          id="previewImg"
+          style="max-width: 100%; margin-top: 10px; display: none"
+        />
 
         <label>説明</label>
-        <textarea id="fruitDescription" rows="3" placeholder="果物の説明を入力"></textarea>
-        <!-- <span id="fruitDescriptionError" class="error-message"></span> -->
+        <textarea
+          id="fruitDescription"
+          name="description"
+          rows="3"
+          placeholder="果物の説明を入力"
+        ></textarea>
 
         <div class="modal-actions">
           <button type="button" class="btn-save" onclick="saveFruit()">
@@ -138,7 +160,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script th:src="@{/js/main.js}"></script>
+  <script th:src="@{/js/submain.js}"></script>
 </body>
 
 </html>
