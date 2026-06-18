@@ -17,23 +17,23 @@
     </nav>
   </header>
 
-  <!-- Toolbar -->
+  <!-- Toolbar + Add Button-->
   <section class="toolbar">
-    <div class="search-area">
-      <input type="text" placeholder="商品を探す" />
-    </div>
-    <div class="filter-area">
-      <select>
-        <option>全部</option>
-        <option>南部</option>
-        <option>北部</option>
-        <option>中部</option>
+    <form action="/fruits" method="get">
+      <input type="text" name="keyword" id="keywordFilter" placeholder="商品を探す" />
+      <button type="submit">検索</button>
+      <select name="region" id="regionFilter" onchange="this.form.submit()">
+        <option value="" th:selected="${selectedRegion == null || selectedRegion == ''}">全部</option>
+        <option value="南部" th:selected="${selectedRegion == '南部'}">南部</option>
+        <option value="北部" th:selected="${selectedRegion == '北部'}">北部</option>
+        <option value="中部" th:selected="${selectedRegion == '中部'}">中部</option>
       </select>
-      <button type="button" class="add-btn" onclick="openAddForm()">
-        商品追加
-      </button>
-    </div>
-  </section>
+    </form>
+
+    <button type="button" class="add-btn" onclick="openAddForm()">
+      商品追加
+    </button>
+   </section>
 
   <!-- Product List -->
   <main>
@@ -57,8 +57,8 @@
           <!-- Edit -->
           <button type="button" class="btn btn-primary" th:data-id="${fruit.id}" th:data-name="${fruit.name}"
             th:data-region="${fruit.region}" th:data-price="${fruit.price}" th:data-quantity="${fruit.quantity}"
-            th:data-description="${fruit.description}" th:data-imageurl="${fruit.imageUrl}"
-            onclick="openEditForm(this)">
+            th:data-description="${fruit.description}" th:data-image-url="${fruit.imageUrl}"
+            onclick="openUpdateForm(this)">
             編集
           </button>
         </div>
@@ -74,8 +74,8 @@
       <h3>商品を削除しますか？</h3>
       <p>この操作は元に戻せません。</p>
       <div class="confirm-actions">
-        <button id="confirmNo" class="btn-cancel">キャンセル</button>
         <button id="confirmYes" class="btn-ok">OK</button>
+        <button id="confirmNo" class="btn-cancel">キャンセル</button>
       </div>
     </div>
   </div>
@@ -84,11 +84,10 @@
   <div id="fruitFormModal" class="modal-overlay">
     <div class="modal-box">
       <button class="modal-close" onclick="closeFruitForm()">×</button>
-
       <h3 id="modalTitle">商品登録</h3>
-
       <form id="fruitForm" action="/fruits/save" class="modal-form" enctype="multipart/form-data">
-        <input type="hidden" id="fruitId" />
+        <input type="hidden" id="fruitId" name="id" />
+        <input type="hidden" id="currentImageUrl" name="currentImageUrl" />
 
         <label>果物名＊
           <span id="fruitNameError" class="error-message"></span>

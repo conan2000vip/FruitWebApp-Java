@@ -1,47 +1,92 @@
-/* SAVE : 商品登録・更新処理*/
+/* ==============================
+   COMMON : 共通処理
+============================== */
+function getElement(id) {
+  return document.getElementById(id);
+}
 
-//APIリクエスト前の前処理
-// hidden項目から商品IDを取得
-// IDが存在する場合：更新処理
-// IDが空の場合：新規登録処理
-document.getElementById("fruitNameError").textContent = "";
-document.getElementById("fruitRegionError").textContent = "";
-document.getElementById("fruitPriceError").textContent = "";
-document.getElementById("fruitQuantityError").textContent = "";
-document.getElementById("fruitImageError").textContent = "";
+function clearErrors() {
+  const errorIds = [
+    "fruitNameError",
+    "fruitRegionError",
+    "fruitPriceError",
+    "fruitQuantityError",
+    "fruitImageError",
+  ];
+
+  errorIds.forEach((id) => {
+    const el = getElement(id);
+    if (el) {
+      el.textContent = "";
+    }
+  });
+}
+
+function setPreviewImage(imageUrl) {
+  const previewImg = getElement("previewImg");
+
+  if (!previewImg) return;
+  if (imageUrl) {
+    // DBには images/xoai.jpg のような相対パスを保存する
+    // 表示するときだけ /images/xoai.jpg にする
+    previewImg.src = imageUrl.startsWith("/") ? imageUrl : "/" + imageUrl;
+    previewImg.style.display = "block";
+  } else {
+    previewImg.removeAttribute("src");
+    previewImg.style.display = "none";
+  }
+}
+
+function getSelectedRegion() {
+  const selectedRegion = document.querySelector('input[name="region"]:checked');
+  return selectedRegion ? selectedRegion.value : "";
+}
+
+function setSelectedRegion(region) {
+  document.querySelectorAll('input[name="region"]').forEach((radio) => {
+    radio.checked = radio.value === region;
+  });
+}
+
+/* ==============================
+   SAVE : 商品登録・更新処理
+============================== */
 
 function saveFruit() {
-  const id = document.getElementById("fruitId").value;
+  clearErrors();
 
-  // フォームデータ作成
+  const id = getElement("fruitId").value;
+  const currentImageUrl = getElement("currentImageUrl")
+    ? getElement("currentImageUrl").value
+    : "";
+
+  const imageFile = getElement("fruitImage").files[0];
   const formData = new FormData();
 
-  formData.append("id", id);
-  formData.append("name", document.getElementById("fruitName").value);
-  const selectedRegion = document.querySelector('input[name="region"]:checked');
-  formData.append("region", selectedRegion ? selectedRegion.value : "");
-  formData.append("price", document.getElementById("fruitPrice").value);
-  formData.append("quantity", document.getElementById("fruitQuantity").value);
-  formData.append(
-    "description",
-    document.getElementById("fruitDescription").value,
-  );
-  // 画像URLは更新時のみ送信
+  // IDがある場合だけ送る。空文字のIDを送るとBackend側でエラーになることがある
   if (id) {
-    formData.append("imageUrl", document.getElementById("previewImg").src);
+    formData.append("id", id);
   }
-  // 画像ファイルが選択されている場合はフォームデータに追加
-  const imageFile = document.getElementById("fruitImage").files[0];
+
+  formData.append("name", getElement("fruitName").value);
+  formData.append("region", getSelectedRegion());
+  formData.append("price", getElement("fruitPrice").value);
+  formData.append("quantity", getElement("fruitQuantity").value);
+  formData.append("description", getElement("fruitDescription").value);
+
+  // 重要：
+  // 更新時に新しい画像を選ばない場合でも、古い画像URLを送る
+  // previewImg.src ではなく、hiddenの currentImageUrl を使う
+  formData.append("imageUrl", currentImageUrl);
+
+  // 新しい画像が選択された場合だけ送信する
   if (imageFile) {
     formData.append("imageFile", imageFile);
   }
 
-  // APIエンドポイントの決定, IDが存在する場合は更新、存在しない場合は新規登録
   const url = id ? "/fruits/update" : "/fruits/save";
-  // アクションテキストの決定
   const actionText = id ? "更新" : "登録";
 
-  // 確認ダイアログの表示
   Swal.fire({
     icon: "question",
     title: `商品を${actionText}しますか？`,
@@ -49,134 +94,173 @@ function saveFruit() {
     confirmButtonText: "OK",
     cancelButtonText: "キャンセル",
   }).then((result) => {
-    // ユーザーがOKをクリックした場合にAPIリクエストを実行
-    if (result.isConfirmed) {
-      fetch(url, {
-        method: "POST",
-        body: formData,
+    if (!result.isConfirmed) return;
+
+    fetch(url, {
+      method: "POST",
+      body: formData,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const errors = await response.json();
+
+          console.log("ERRORS =", errors);
+
+          getElement("fruitNameError").textContent = errors.name || "";
+          getElement("fruitRegionError").textContent = errors.region || "";
+          getElement("fruitPriceError").textContent = errors.price || "";
+          getElement("fruitQuantityError").textContent = errors.quantity || "";
+          getElement("fruitImageError").textContent =
+            errors.imageFile || errors.imageUrl || "";
+
+          // validation errorの場合は下のcatchで余計なエラーアラートを出さない
+          throw { type: "validation" };
+        }
+
+        return response.text();
       })
-        .then(async (response) => {
-          if (!response.ok) {
-
-            const errors = await response.json();
-
-            console.log("ERRORS =", errors);
-
-            document.getElementById("fruitNameError").textContent =
-              errors.name || "";
-
-            document.getElementById("fruitRegionError").textContent =
-              errors.region || "";
-
-            document.getElementById("fruitPriceError").textContent =
-              errors.price || "";
-
-            document.getElementById("fruitQuantityError").textContent =
-              errors.quantity || "";
-
-            document.getElementById("fruitImageError").textContent =
-              errors.imageFile || errors.imageUrl || "";
-
-            throw new Error("Validation Error");
-          }
-
-          return response.text();
-        })
-        .then(() => {
-          Swal.fire({
-            icon: "success",
-            title: id ? "商品情報を更新しました" : "商品を登録しました",
-            confirmButtonText: "OK",
-          }).then(() => {
-            closeFruitForm();
-            location.reload();
-          });
-        })
-        .catch((error) => {
-          console.error(error);
-
-          Swal.fire({
-            icon: "error",
-            title: "処理失敗",
-            text: error.message,
-          });
+      .then(() => {
+        Swal.fire({
+          icon: "success",
+          title: id ? "商品情報を更新しました" : "商品を登録しました",
+          confirmButtonText: "OK",
+        }).then(() => {
+          closeFruitForm();
+          location.reload();
         });
-      }
-    });
+      })
+      .catch((error) => {
+        console.error(error);
+
+        if (error && error.type === "validation") {
+          return;
+        }
+        Swal.fire({
+          icon: "error",
+          title: "処理失敗",
+          text: "処理中にエラーが発生しました。",
+        });
+      });
+  });
 }
 
-/* OPEN/CLOSE : モーダル表示・非表示処理*/
+/* ==============================
+   OPEN/CLOSE : モーダル表示・非表示処理
+============================== */
+
 function openAddForm() {
-      // モーダルタイトルを「商品登録」に設定
-      document.getElementById("modalTitle").textContent = "商品登録";
-      // フォームをリセットして、IDを空にする
-      document.getElementById("fruitForm").reset();
+  clearErrors();
+  getElement("modalTitle").textContent = "商品登録";
+  getElement("fruitForm").reset();
+  getElement("fruitId").value = "";
 
-      document.getElementById("fruitId").value = "";
-      // プレビュー画像を非表示にする
-      document.getElementById("previewImg").style.display = "none";
-      // モーダルを表示する
-      document.getElementById("fruitFormModal").style.display = "flex";
-    }
+  if (getElement("currentImageUrl")) {
+    getElement("currentImageUrl").value = "";
+  }
+  getElement("fruitImage").value = "";
+  setPreviewImage("");
+  getElement("fruitFormModal").style.display = "flex";
+}
 
-    // 編集ボタンがクリックされたときの処理
-    function openEditForm(btn) {
-      // モーダルタイトルを「商品編集」に設定
-      document.getElementById("modalTitle").textContent = "商品編集";
-      // フォームの各項目にデータ属性から値をセットする
-      document.getElementById("fruitId").value = btn.dataset.id;
-      document.getElementById("fruitName").value = btn.dataset.name;
-      document.getElementById("fruitPrice").value = btn.dataset.price;
-      document.getElementById("fruitQuantity").value = btn.dataset.quantity;
-      document.getElementById("fruitDescription").value = btn.dataset.description;
-      // 地域のラジオボタンを選択する
-      document.querySelectorAll('input[name="region"]').forEach((r) => {
-        r.checked = r.value === btn.dataset.region;
-      });
-      // プレビュー画像の表示
-      const img = document.getElementById("previewImg");
-      // データ属性に画像URLがある場合は表示、ない場合は非表示
-      if (btn.dataset.imageurl) {
-        img.src = btn.dataset.imageurl;
-        img.style.display = "block";
-      } else {
-        img.style.display = "none";
-      }
-      // モーダルを表示する
-      document.getElementById("fruitFormModal").style.display = "flex";
-    }
-    // モーダルを閉じる処理
-    function closeFruitForm() {
-      document.getElementById("fruitFormModal").style.display = "none";
-    }
-    // モーダルの外側をクリックしたときにモーダルを閉じる処理
-    window.addEventListener("click", function (e) {
-      const modal = document.getElementById("fruitFormModal");
-      if (e.target === modal) {
-        closeFruitForm();
-      }
-    });
+function openUpdateForm(btn) {
+  clearErrors();
 
-    /* DELETE : 商品削除処理*/
-    function openConfirmDialog(id) {
-      document.getElementById("confirmDialog").style.display = "flex";
-      document.getElementById("confirmYes").dataset.id = id;
+  getElement("modalTitle").textContent = "商品編集";
+
+  getElement("fruitId").value = btn.dataset.id || "";
+  getElement("fruitName").value = btn.dataset.name || "";
+  getElement("fruitPrice").value = btn.dataset.price || "";
+  getElement("fruitQuantity").value = btn.dataset.quantity || "";
+  getElement("fruitDescription").value = btn.dataset.description || "";
+
+  setSelectedRegion(btn.dataset.region || "");
+
+  // data-image-url でも data-imageurl でも取れるようにしておく
+  const imageUrl = btn.dataset.imageUrl || btn.dataset.imageurl || "";
+
+  // 古い画像URLをhiddenに保存する
+  if (getElement("currentImageUrl")) {
+    getElement("currentImageUrl").value = imageUrl;
+  }
+
+  // file input は必ず空にする
+  // file inputには既存画像をセットできないため
+  getElement("fruitImage").value = "";
+
+  setPreviewImage(imageUrl);
+
+  getElement("fruitFormModal").style.display = "flex";
+}
+
+function closeFruitForm() {
+  getElement("fruitFormModal").style.display = "none";
+}
+
+/* ==============================
+   IMAGE PREVIEW : 画像プレビュー
+============================== */
+
+const fruitImageInput = getElement("fruitImage");
+
+if (fruitImageInput) {
+  fruitImageInput.addEventListener("change", function () {
+    const file = this.files[0];
+    const currentImageUrl = getElement("currentImageUrl")
+      ? getElement("currentImageUrl").value
+      : "";
+
+    if (file) {
+      const previewImg = getElement("previewImg");
+      previewImg.src = URL.createObjectURL(file);
+      previewImg.style.display = "block";
+    } else {
+      setPreviewImage(currentImageUrl);
     }
-    // 確認ダイアログを閉じる処理
-    function closeConfirmDialog() {
-      document.getElementById("confirmDialog").style.display = "none";
-    }
-    // 確認ダイアログの「はい」ボタンがクリックされたときの処理
-    document.getElementById("confirmYes").addEventListener("click", function () {
-      window.location.href = "/fruits/delete/" + this.dataset.id;
-    });
-    // 確認ダイアログの「いいえ」ボタンがクリックされたときの処理
-    document.getElementById("confirmNo").addEventListener("click", function () {
-      closeConfirmDialog();
-    });
-    // 商品削除ボタンがクリックされたときの処理
-    document.addEventListener("click", function (e) {
-      if (e.target.classList.contains("delete-btn")) {
-        openConfirmDialog(e.target.dataset.id);
-      }
-    });
+  });
+}
+
+/* ==============================
+   MODAL OUTSIDE CLICK : 外側クリックで閉じる
+============================== */
+
+window.addEventListener("click", function (e) {
+  const modal = getElement("fruitFormModal");
+
+  if (e.target === modal) {
+    closeFruitForm();
+  }
+});
+
+/* ==============================
+   DELETE : 商品削除処理
+============================== */
+
+function openConfirmDialog(id) {
+  getElement("confirmDialog").style.display = "flex";
+  getElement("confirmYes").dataset.id = id;
+}
+
+function closeConfirmDialog() {
+  getElement("confirmDialog").style.display = "none";
+}
+
+const confirmYes = getElement("confirmYes");
+const confirmNo = getElement("confirmNo");
+
+if (confirmYes) {
+  confirmYes.addEventListener("click", function () {
+    window.location.href = "/fruits/delete/" + this.dataset.id;
+  });
+}
+
+if (confirmNo) {
+  confirmNo.addEventListener("click", function () {
+    closeConfirmDialog();
+  });
+}
+
+document.addEventListener("click", function (e) {
+  if (e.target.classList.contains("delete-btn")) {
+    openConfirmDialog(e.target.dataset.id);
+  }
+});

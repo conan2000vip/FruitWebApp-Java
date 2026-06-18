@@ -10,5 +10,8 @@ public interface FruitRepository extends JpaRepository<Fruit, Long> {
 
 	List<Fruit> findByNameContainingIgnoreCase(String keyword);
 
-	List<Fruit> findByNameContaining(String keyword);
+	List<Fruit> findByNameContainingIgnoreCaseAndRegion(String keyword, String region);
+
+	List<Fruit> findByRegion(String region);
+
 }

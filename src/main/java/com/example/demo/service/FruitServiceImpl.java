@@ -17,16 +17,29 @@ public class FruitServiceImpl implements FruitService {
 	@Override
 	// 全てのフルーツを取得
 	public List<Fruit> getAll() {
-		return fruitRepository.findAll(); 
+		return fruitRepository.findAll();
 	}
 
 	@Override
 	// 名前でフルーツを検索
-	public List<Fruit> searchByName(String keyword) {
-		if (keyword == null || keyword.isBlank()) {
-			return fruitRepository.findAll();
+	public List<Fruit> search(String keyword, String region) {
+
+		boolean hasKeyword = keyword != null && !keyword.isBlank();
+		boolean hasRegion = region != null && !region.isBlank();
+
+		if (hasKeyword && hasRegion) {
+			return fruitRepository.findByNameContainingIgnoreCaseAndRegion(keyword, region);
 		}
-		return fruitRepository.findByNameContainingIgnoreCase(keyword);
+
+		if (hasKeyword) {
+			return fruitRepository.findByNameContainingIgnoreCase(keyword);
+		}
+
+		if (hasRegion) {
+			return fruitRepository.findByRegion(region);
+		}
+
+		return fruitRepository.findAll();
 	}
 
 	@Override
