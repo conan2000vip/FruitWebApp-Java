@@ -11,6 +11,8 @@ import com.example.demo.repository.FruitRepository;
 @Service
 public class FruitServiceImpl implements FruitService {
 
+	private static final int LOW_STOCK_THRESHOLD = 5;
+
 	@Autowired
 	private FruitRepository fruitRepository;
 
@@ -69,6 +71,26 @@ public class FruitServiceImpl implements FruitService {
 	}
 
 	@Override
+	public boolean existsByNameIgnoreCase(String name) {
+		return fruitRepository.existsByNameIgnoreCase(name);
+	}
+
+	@Override
+	public boolean existsByNameIgnoreCaseAndIdNot(String name, Long id) {
+		return fruitRepository.existsByNameIgnoreCaseAndIdNot(name, id);
+	}
+
+	@Override
+	public boolean existsByNameIgnoreCaseAndRegion(String name, String region) {
+		return fruitRepository.existsByNameIgnoreCaseAndRegion(name, region);
+	}
+
+	@Override
+	public boolean existsByNameIgnoreCaseAndRegionAndIdNot(String name, String region, Long id) {
+		return fruitRepository.existsByNameIgnoreCaseAndRegionAndIdNot(name, region, id);
+	}
+
+	@Override
 	public void delete(Long id) {
 		fruitRepository.deleteById(id);
 	}
@@ -81,6 +103,39 @@ public class FruitServiceImpl implements FruitService {
 	@Override
 	public long count() {
 		return fruitRepository.count();
+	}
+
+	@Override
+	public List<Fruit> getLowStockFruits() {
+		return fruitRepository.findAll().stream()
+				.filter(fruit -> fruit.getQuantity() != null && fruit.getQuantity() > 0
+						&& fruit.getQuantity() <= LOW_STOCK_THRESHOLD)
+				.toList();
+	}
+
+	@Override
+	public int countProducts() {
+		return (int) fruitRepository.count();
+	}
+
+	@Override
+	public int totalStock() {
+		return fruitRepository.findAll().stream()
+				.mapToInt(fruit -> {
+					Integer quantity = fruit.getQuantity();
+					return quantity != null ? quantity : 0;
+				})
+				.sum();
+	}
+
+	@Override
+	public int countLowStock() {
+		return (int) fruitRepository.findAll().stream()
+				.filter(fruit -> {
+					Integer quantity = fruit.getQuantity();
+					return quantity != null && quantity > 0 && quantity <= LOW_STOCK_THRESHOLD;
+				})
+				.count();
 	}
 
 }

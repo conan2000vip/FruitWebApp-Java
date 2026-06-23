@@ -7,7 +7,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
+
+import jakarta.validation.Valid;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,8 +31,6 @@ import com.example.demo.dto.FruitDTO;
 import com.example.demo.entity.Fruit;
 import com.example.demo.service.FruitService;
 
-import jakarta.validation.Valid;
-
 @RequestMapping("/fruits")
 @Controller
 public class FruitController {
@@ -49,9 +48,9 @@ public class FruitController {
 			@RequestParam(required = false) String keyword,
 			@RequestParam(required = false) String region,
 			Model model) {
-
-		model.addAttribute("fruits",
-				fruitService.search(keyword, region));
+		model.addAttribute("page", "fruits");
+		model.addAttribute("fruits", fruitService.search(keyword, region));
+		model.addAttribute("keyword", keyword);
 		model.addAttribute("selectedRegion", region);
 		return "fruit/list";
 	}
@@ -67,7 +66,9 @@ public class FruitController {
 	public ResponseEntity<?> save(
 			@Valid @ModelAttribute FruitDTO fruitDTO,
 			BindingResult bindingResult,
-			@RequestParam(required = false) MultipartFile imageFile)
+			@RequestParam(required = false) MultipartFile imageFile,
+			@RequestParam(required = false, name = "imageUrl") String imageUrl,
+			@RequestParam(required = false, name = "currentImageUrl") String currentImageUrl)
 			throws IOException {
 		Map<String, String> errors = new HashMap<>();
 		if (bindingResult.hasErrors()) {
@@ -78,34 +79,48 @@ public class FruitController {
 			});
 		}
 
-		// 画像ファイルが選択されていない場合のエラーメッセージを追加
-		if (imageFile == null || imageFile.isEmpty()) {
+		String finalImageUrl = imageUrl != null && !imageUrl.isBlank() ? imageUrl : currentImageUrl;
+
+		// 画像ファイルが選択されていない場合は、currentImageUrl / imageUrlを使用できるようにする
+		if ((imageFile == null || imageFile.isEmpty()) && (finalImageUrl == null || finalImageUrl.isBlank())) {
 			errors.put("imageFile", "画像を選択してください。");
 		}
+
 		// バリデーションエラーがある場合は、エラーメッセージを返す
 		if (!errors.isEmpty()) {
 			return ResponseEntity.badRequest().body(errors);
 		}
+
 		// 画像保存
 		if (!Files.exists(uploadPath)) {
 			Files.createDirectories(uploadPath);
 		}
 
-		// 画像ファイルが選択されている場合のみ保存処理を行う
-		MultipartFile file = Objects.requireNonNull(imageFile);
-		String fileName = System.currentTimeMillis() + "_"
-				+ Paths.get(file.getOriginalFilename()).getFileName().toString();
-		Path filePath = uploadPath.resolve(fileName);
-		Files.copy(
-				file.getInputStream(),
-				filePath,
-				StandardCopyOption.REPLACE_EXISTING);
-		String imageUrl = "/images/" + fileName;
+		if (imageFile != null && !imageFile.isEmpty()) {
+			String fileName = System.currentTimeMillis() + "_"
+					+ Paths.get(imageFile.getOriginalFilename()).getFileName().toString();
+			Path filePath = uploadPath.resolve(fileName);
+			Files.copy(
+					imageFile.getInputStream(),
+					filePath,
+					StandardCopyOption.REPLACE_EXISTING);
+			finalImageUrl = "/images/" + fileName;
+		}
+
+		// 重複チェック: 同じ名前の商品がすでに存在している場合は保存をブロック
+		// Check duplicate within the same region only (allow same name in different regions)
+		if (fruitService.existsByNameIgnoreCaseAndRegion(fruitDTO.getName(), fruitDTO.getRegion())) {
+			errors.put("duplicate", "この果物名は既に登録されています。");
+		}
+
+		if (!errors.isEmpty()) {
+			return ResponseEntity.badRequest().body(errors);
+		}
 
 		// DB登録: DTO -> Entity に変換して保存
 		Fruit fruit = new Fruit();
 		BeanUtils.copyProperties(fruitDTO, fruit);
-		fruit.setImageUrl(imageUrl);
+		fruit.setImageUrl(finalImageUrl);
 		fruitService.save(fruit);
 
 		// 一覧画面へ遷移
@@ -133,6 +148,13 @@ public class FruitController {
 		if (fruit == null) {
 			Map<String, String> errors = new HashMap<>();
 			errors.put("id", "商品が見つかりません。");
+			return ResponseEntity.badRequest().body(errors);
+		}
+
+		// Duplicate check: consider region too so same name in different region is allowed
+		if (fruitService.existsByNameIgnoreCaseAndRegionAndIdNot(fruitDTO.getName(), fruitDTO.getRegion(), fruitDTO.getId())) {
+			Map<String, String> errors = new HashMap<>();
+			errors.put("duplicate", "この果物名は同じ地域ですでに登録されています。");
 			return ResponseEntity.badRequest().body(errors);
 		}
 		// 画像以外の情報だけ更新する

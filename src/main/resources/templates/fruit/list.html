@@ -11,16 +11,22 @@
   <header>
     <h1>フルーツ販売ショップ</h1>
     <nav class="nav-box">
-      <a href="/" class="nav-item"><span class="icon">🏠</span> HOME</a>
-      <a href="/fruits" class="nav-item">商品管理</a>
-      <a href="/admin" class="nav-item"><span class="icon">👤</span> Admin</a>
+		<a href="/" class="nav-item" th:classappend="${page}=='home' ? ' active'">
+			<span class="icon">🏠</span> HOME
+		</a>
+		<a href="/fruits" class="nav-item" th:classappend="${page}=='fruits' ? ' active'">
+			商品管理
+		</a>
+		<a href="/admin" class="nav-item" th:classappend="${page}=='admin' ? ' active'">
+			<span class="icon">👤</span> Admin
+		</a>
     </nav>
   </header>
 
   <!-- Toolbar + Add Button-->
   <section class="toolbar">
     <form action="/fruits" method="get">
-      <input type="text" name="keyword" id="keywordFilter" placeholder="商品を探す" />
+      <input type="text" name="keyword" id="keywordFilter" placeholder="🔍 商品を探す" th:value="${keyword}" />
       <button type="submit">検索</button>
       <select name="region" id="regionFilter" onchange="this.form.submit()">
         <option value="" th:selected="${selectedRegion == null || selectedRegion == ''}">全部</option>
@@ -46,7 +52,7 @@
         <p>価格: <span th:text="${fruit.price}"></span> 円</p>
         <p>地域: <span th:text="${fruit.region}"></span></p>
         <p th:text="${fruit.description}"></p>
-        <p th:text="${fruit.quantity > 0 ? '在庫あり' : '在庫なし'}"></p>
+        <p>在庫量: <span th:text="${fruit.quantity > 0 ? fruit.quantity : 0}"></span></p>
 
         <div class="actions">
           <!-- Delete -->
@@ -94,8 +100,9 @@
         </label>
         <input type="text" id="fruitName" placeholder="果物名を入力" />
 
-        <label>地域＊</label>
-        <span id="fruitRegionError" class="error-message"></span>
+        <label>地域＊
+          <span id="fruitRegionError" class="error-message"></span>
+        </label>
         <div class="region-options">
           <label><input type="radio" name="region" value="北部" /> 北部</label>
           <label><input type="radio" name="region" value="南部" /> 南部</label>
@@ -115,9 +122,15 @@
         <label>商品画像＊
           <span id="fruitImageError" class="error-message"></span>
         </label>
-        <div class="image-upload-area">
-          <input type="file" id="fruitImage" />
-        </div>
+		<div class="image-upload-area">
+		    <button class="image_button" type="button">
+		        <div class="image_area">
+		            <span class="add_icon">🖼️画像を追加する</span>
+		        </div>
+		    </button>
+		    <input type="file" id="fruitImage" class="real_upload">
+		</div>
+
         <img id="previewImg" style="max-width: 100%; margin-top: 10px; display: none" />
 
         <label>説明</label>

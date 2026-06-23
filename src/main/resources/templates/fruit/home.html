@@ -1,0 +1,179 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>商品管理</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}" />
+  <link rel="stylesheet" th:href="@{/css/home.css}" />
+</head>
+
+<body class="home-page">
+  <header>
+    <h1>フルーツ販売ショップ</h1>
+    <nav class="nav-box">
+		<a href="/" class="nav-item" th:classappend="${page}=='home' ? ' active'">
+			<span class="icon">🏠</span> HOME
+		</a>
+		<a href="/fruits" class="nav-item" th:classappend="${page}=='fruits' ? ' active'">
+			商品管理
+		</a>
+		<a href="/admin" class="nav-item" th:classappend="${page}=='admin' ? ' active'">
+			<span class="icon">👤</span> Admin
+		</a>
+    </nav>
+  </header>
+
+  <main class="main container">
+    <h2 class="title">店舗ダッシュボード</h2>
+    <!-- 店舗概要 -->
+    <section class="overview-section">
+      <h2 class="section-title">店舗概要</h2>
+
+      <div class="summary">
+        <div class="summary-card">
+          <h3>総商品数</h3>
+          <p th:text="${totalProducts} + ' 種類'"></p>
+        </div>
+
+        <div class="summary-card">
+          <h3>総在庫数</h3>
+          <p th:text="${totalStock} + ' 個'"></p>
+        </div>
+
+        <div class="summary-card">
+          <h3>在庫わずか</h3>
+          <p th:text="${lowStockCount} + ' 種類'"></p>
+        </div>
+
+        <div class="summary-card">
+          <h3>本日の新規注文</h3>
+          <p th:text="${todayOrders} + ' 件の注文'"></p>
+        </div>
+      </div>
+    </section>
+	
+    <!-- 注意が必要な商品 -->
+    <section class="warning-section">
+      <h2 class="section-title">注意が必要な商品</h2>
+
+      <div class="warning-box">
+        <div class="product-card" th:each="fruit : ${lowStockFruits}">
+          <div class="product-card-header">
+            <h3 th:text="${fruit.name}"></h3>
+            <span class="stock-badge">わずか</span>
+          </div>
+          <div class="product-info">
+            <p>地域: <span th:text="${fruit.region}"></span></p>
+            <p>在庫: <span th:text="${fruit.quantity}"></span>個</p>
+            <p>価格: <span th:text="${fruit.price}"></span> 円</p>
+            <!--<p th:if="${fruit.description != null}">説明: <span th:text="${fruit.description}"></span></p>-->
+            <img th:if="${fruit.imageUrl != null}" th:src="@{${fruit.imageUrl}}" class="warning-product-img" alt="商品画像" />
+          </div>
+          <button type="button" class="card-btn"
+            th:data-id="${fruit.id}" th:data-name="${fruit.name}"
+            th:data-region="${fruit.region}" th:data-price="${fruit.price}"
+            th:data-quantity="${fruit.quantity}"
+            th:data-description="${fruit.description}"
+            th:data-image-url="${fruit.imageUrl}"
+            onclick="openUpdateForm(this)">編集</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 新規注文 -->
+    <section class="orders-section">
+      <h2 class="section-title">本日の新規注文</h2>
+
+      <table class="order-table">
+        <thead>
+          <tr>
+            <th>注文ID</th>
+            <th>注文名</th>
+            <th>金額</th>
+            <th>数量</th>
+            <th>住所</th>
+            <th>日付</th>
+            <th>状態</th>
+          </tr>
+        </thead>
+        <tbody th:each="order : ${newOrders}">
+          <tr>
+            <td th:text="${order.id}"></td>
+            <td th:text="${order.orderName}"></td>
+            <td th:text="${order.orderPrice} + ' 円'"></td>
+            <td th:text="${order.orderQuantity}"></td>
+            <td th:text="${order.address}"></td>
+            <td th:text="${order.orderDate}"></td>
+            <td th:text="${order.orderStatus}"></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="bottom-buttons">
+        <a href="/orders" class="bottom-btn">注文一覧</a>
+        <a href="/orders/manage" class="bottom-btn">注文管理</a>
+      </div>
+    </section>
+  </main>
+
+  <div id="fruitFormModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeFruitForm()">×</button>
+      <h3 id="modalTitle">商品登録</h3>
+      <form id="fruitForm" action="/fruits/save" class="modal-form" enctype="multipart/form-data">
+        <input type="hidden" id="fruitId" name="id" />
+        <input type="hidden" id="currentImageUrl" name="currentImageUrl" />
+
+        <label>果物名＊
+          <span id="fruitNameError" class="error-message"></span>
+        </label>
+        <input type="text" id="fruitName" name="name" placeholder="果物名を入力" />
+
+        <label>地域＊
+          <span id="fruitRegionError" class="error-message"></span>
+        </label>
+        <div class="region-options">
+          <label><input type="radio" name="region" value="北部" /> 北部</label>
+          <label><input type="radio" name="region" value="南部" /> 南部</label>
+          <label><input type="radio" name="region" value="中部" /> 中部</label>
+        </div>
+
+        <label>販売価格＊
+          <span id="fruitPriceError" class="error-message"></span>
+        </label>
+        <input type="number" id="fruitPrice" name="price" placeholder="価格を入力" />
+
+        <label>在庫量＊
+          <span id="fruitQuantityError" class="error-message"></span>
+        </label>
+        <input type="number" id="fruitQuantity" name="quantity" placeholder="数量を入力" />
+
+        <label>商品画像
+          <span id="fruitImageError" class="error-message"></span>
+        </label>
+        <div class="image-upload-area">
+          <input type="file" id="fruitImage" name="imageFile" />
+        </div>
+        <img id="previewImg" style="max-width: 100%; margin-top: 10px; display: none" />
+
+        <label>説明</label>
+        <textarea id="fruitDescription" name="description" rows="3" placeholder="果物の説明を入力"></textarea>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-save" onclick="saveFruit()">
+            保存
+          </button>
+          <button type="button" class="btn-cancel" onclick="closeFruitForm()">
+            キャンセル
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script th:src="@{/js/main.js}"></script>
+</body>
+
+</html>
