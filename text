@@ -1,0 +1,304 @@
+# README作成・環境構築・GitHub初期設定
+
+## 1. README作成
+
+READMEファイルは、プロジェクトの概要、使用技術、環境構築方法、実行方法などをまとめるためのファイルである。GitHub上でプロジェクトを共有する際、最初に確認される重要なドキュメントである。
+
+### 1.1 プロジェクト概要
+
+本プロジェクトは、Spring Bootを使用して開発するWebアプリケーションである。ユーザーはブラウザ上でシステムにアクセスし、データの登録、表示、編集、削除などの基本操作を行うことができる。
+
+### 1.2 使用技術
+
+本プロジェクトで使用する主な技術は以下の通りである。
+
+| 項目      | 使用技術                             |
+| ------- | -------------------------------- |
+| バックエンド  | Java 17, Spring Boot 3.x         |
+| ビルドツール  | Maven                            |
+| データベース  | MySQL 8.0                        |
+| フロントエンド | HTML, CSS, JavaScript, Bootstrap |
+| セキュリティ  | Spring Security                  |
+| バージョン管理 | Git, GitHub                      |
+| 開発環境    | Eclipse                          |
+
+### 1.3 READMEに記載する内容
+
+READMEには、主に以下の内容を記載する。
+
+* プロジェクト名
+* プロジェクト概要
+* 使用技術
+* 必要な環境
+* セットアップ手順
+* データベース設定
+* 実行方法
+* GitHubリポジトリ情報
+* 注意事項
+
+### 1.4 README作成例
+
+プロジェクトのルートフォルダに `README.md` ファイルを作成し、以下のように記述する。
+
+````markdown
+# Project Name
+
+## 概要
+このプロジェクトは、Spring Bootを使用したWebアプリケーションです。
+
+## 使用技術
+- Java 17
+- Spring Boot 3.x
+- Maven
+- MySQL 8.0
+- HTML / CSS / JavaScript / Bootstrap
+- Spring Security
+- Git / GitHub
+- Eclipse
+
+## 環境構築
+1. Java 17をインストールする
+2. Eclipseをインストールする
+3. MySQL 8.0をインストールする
+4. Mavenを確認する
+5. GitHubからプロジェクトを取得する
+
+## 実行方法
+以下のコマンドでプロジェクトを実行する。
+
+```bash
+mvn spring-boot:run
+````
+
+ブラウザで以下のURLにアクセスする。
+
+```text
+http://localhost:8080
+```
+
+## 注意事項
+
+データベースのパスワードなどの個人情報はGitHubに公開しないように注意する。
+
+````
+
+## 2. 環境構築
+
+本プロジェクトを実行するためには、以下の開発環境を準備する必要がある。
+
+### 2.1 Java 17の確認
+
+Spring Boot 3.xを使用するため、Java 17以上が必要である。ターミナルで以下のコマンドを実行し、Javaのバージョンを確認する。
+
+```bash
+java -version
+````
+
+実行結果の例は以下の通りである。
+
+```text
+openjdk version "17.0.19"
+OpenJDK Runtime Environment Temurin-17.0.19
+```
+
+また、Javaコンパイラも確認する。
+
+```bash
+javac -version
+```
+
+以下のように表示されれば問題ない。
+
+```text
+javac 17.0.19
+```
+
+### 2.2 Mavenの確認
+
+Mavenが使用できるか確認するため、以下のコマンドを実行する。
+
+```bash
+mvn -version
+```
+
+実行結果にJava 17が表示されていることを確認する。
+
+```text
+Java version: 17.x.x
+```
+
+### 2.3 MySQL 8.0の設定
+
+MySQL 8.0をインストール後、以下のコマンドでログインする。
+
+```bash
+mysql -u root -p
+```
+
+ログイン後、プロジェクト用のデータベースを作成する。
+
+```sql
+CREATE DATABASE project_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+作成されたデータベースを確認する。
+
+```sql
+SHOW DATABASES;
+```
+
+### 2.4 Spring Bootのデータベース設定
+
+`src/main/resources/application.properties` にデータベース接続情報を設定する。
+
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/project_db?useSSL=false&serverTimezone=Asia/Tokyo&allowPublicKeyRetrieval=true
+spring.datasource.username=root
+spring.datasource.password=your_password
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+
+server.port=8080
+```
+
+ただし、実際のパスワードをGitHubに公開しないように注意する。
+
+### 2.5 Eclipseでの設定
+
+Eclipseを起動し、以下の設定を確認する。
+
+1. `Preferences` を開く
+2. `Java > Installed JREs` を選択する
+3. JDK 17が登録されていることを確認する
+4. JDK 17をデフォルトに設定する
+5. `Java > Compiler` で `Compiler compliance level` を17に設定する
+
+これにより、Eclipse上でもJava 17を使用して開発できるようになる。
+
+### 2.6 プロジェクトの実行確認
+
+プロジェクトフォルダで以下のコマンドを実行する。
+
+```bash
+mvn spring-boot:run
+```
+
+起動後、ブラウザで以下のURLにアクセスする。
+
+```text
+http://localhost:8080
+```
+
+画面が表示されれば、環境構築は完了である。
+
+## 3. GitHub初期設定
+
+GitHub初期設定では、ローカルプロジェクトをGitで管理し、GitHub上のリポジトリへアップロードする。
+
+### 3.1 Gitの確認
+
+まず、Gitがインストールされているか確認する。
+
+```bash
+git --version
+```
+
+### 3.2 Gitユーザー情報の設定
+
+初回のみ、Gitのユーザー名とメールアドレスを設定する。
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "your_email@example.com"
+```
+
+設定内容を確認する。
+
+```bash
+git config --global --list
+```
+
+### 3.3 GitHubリポジトリの作成
+
+GitHubにログインし、新しいリポジトリを作成する。
+
+設定例は以下の通りである。
+
+| 項目              | 設定内容                |
+| --------------- | ------------------- |
+| Repository name | project-name        |
+| Visibility      | Public または Private  |
+| README          | ローカルで作成する場合はチェックしない |
+| .gitignore      | Java用を選択、または後で作成    |
+| License         | 必要に応じて選択            |
+
+### 3.4 ローカルプロジェクトのGit初期化
+
+プロジェクトフォルダに移動し、以下のコマンドを実行する。
+
+```bash
+git init
+```
+
+次に、管理対象のファイルを追加する。
+
+```bash
+git add .
+```
+
+初回コミットを行う。
+
+```bash
+git commit -m "Initial commit"
+```
+
+### 3.5 GitHubリポジトリとの接続
+
+GitHubで作成したリポジトリのURLを使用して、ローカルリポジトリとGitHubを接続する。
+
+```bash
+git branch -M main
+git remote add origin https://github.com/username/repository-name.git
+git push -u origin main
+```
+
+### 3.6 `.gitignore` の設定
+
+GitHubに不要なファイルをアップロードしないため、`.gitignore` を作成する。
+
+```gitignore
+target/
+.classpath
+.project
+.settings/
+.DS_Store
+*.log
+.env
+```
+
+特に、パスワードや個人情報を含むファイルをGitHubに公開しないよう注意する。
+
+### 3.7 GitHub初期設定の完了確認
+
+以下のコマンドで状態を確認する。
+
+```bash
+git status
+```
+
+また、GitHubのリポジトリページを開き、ファイルが正しくアップロードされているか確認する。
+
+## 4. 注意事項
+
+環境構築やGitHub初期設定を行う際は、以下の点に注意する。
+
+* Javaのバージョンは17を使用する
+* Spring Boot 3.xとJava 17の組み合わせにする
+* MySQLのデータベース名、ユーザー名、パスワードを確認する
+* GitHubにパスワードや秘密情報を公開しない
+* EclipseでもJDK 17を使用するよう設定する
+* 作業ごとにこまめにコミットする
+
+以上により、README作成、環境構築、GitHub初期設定が完了する。
