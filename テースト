@@ -1,0 +1,534 @@
+1 Weight Log
+Q1. một ngày user cân nhiều lần thì xử lý thế nào(1 ngày chỉ cho phép nhật 1 lần hay cho phép nhập nhiều lần )
+     cho phép nhiều bản ghi , khi hiển thị thì tính trung bình ngày
+Q2. Nếu user nhập ngày hôm qua nhưng hôm nay mới nhập thì sao? 
+    Cho phép nhập ngày quá khứ
+    Không cho phép ngày tương lai
+Q3. User nhập cân nặng trong tương lai thì sao? 
+    measured_date <= today
+    未来の日付は登録できません
+nhập cân nặng bằng 0 đây là dữ liệu sai bắt buộc nhập lớn hơn 
+Feedback
+体重は1kg以上で入力してください。
+Feedback nhập cân nặng quá thấp (trẻ sơ sinh)
+Popup:
+入力した体重が低すぎます。
+5kgで登録しますか？
+Validation
+Ví dụ nhập sai đơn vị 500kg
+1kg <= weight <= 300kg
+Feedback
+体重の値を確認してください。
+Feedback
+Nếu sai format: nhập số thập phân 60.5555 quá nhiều chỉ cho phép 1 số 
+体重は小数点1桁まで入力してください。
+Backend:
+check type. nhập chữ không cho nhập
+Feedback
+数字で入力してください。
+Một ngày nhập nhiều lần 
+Table: thêm cột measured-at cho phép nhập nhiều lần trong ngày, biểu đồ hiển thị theo mốc thời gian nhập , lưu lịch sử đầy đủ Biểu đồ sẽ có nhiều điểm trong cùng 1 ngày. BIM cũng thay đổi theo từng lần nhập liệu
+Ví dụ ngày 2026-07-10 có 3 điểm:
+08:15 → 50.2
+14:30 → 50.0
+21:10 → 49.8
+👉 Biểu đồ sẽ vẽ 3 điểm trên cùng ngày. ưu điểm là chính xác, dữ liệu thật 100 phần trăm
+weight_logs
+
+id
+profile_id
+weight
+measured_at
+Nhập ngày trong tương lai 
+Feedback
+measuredDate <= LocalDate.now()
+未来の日付は登録できません。
+Nhập dữ liệu quá cũ 
+Cách xử lý
+Không block.
+Nhưng cảnh báo:
+古い日付のデータです。
+登録しますか？
+
+Ngày đo và ngày nhập khác nhau User nhập:
+測定日:
+2026/07/09
+
+登録日:
+2026/07/10
+Feedback
+Trước khi xóa:
+このデータを削除しますか？
+Cân nặng giảm/tăng quá nhanh
+Tình huống
+Hôm qua:
+80kg
+Hôm nay:
+50kg
+Vấn đề
+Có thể:
+Nhập sai
+Có vấn đề sức khỏe
+Không nên block.
+Hiển thị cảnh báo:
+前回の体重との差が大きいです。
+入力内容を確認してください。
+Mất kết nối khi bấm đăng ký 
+Tình huống
+User click:
+登録
+Internet mất.
+Vấn đề
+Có thể:
+User bấm nhiều lần
+Tạo duplicate
+Xử lý:
+Backend transaction.
+Feedback:
+登録に失敗しました。
+もう一度お試しください。
+Tổng hợp các validation cho Weight
+Vấn đề
+Loại xử lý
+Không nhập
+Error hoặc Empty
+0kg
+Error
+Âm
+Error
+Quá nhỏ
+Warning
+Quá lớn
+Warning/Error
+Sai format
+Error
+Chữ
+Error
+Ngày tương lai
+Error
+Ngày quá khứ
+Cho phép
+Nhập nhiều lần/ngày
+Business rule
+Update
+Cho phép
+Delete
+Confirm
+Giảm/tăng bất thường
+Warning
+Duplicate request
+Backend xử lý
+
+Thiết kế 4 cấp độ Feedback
+Tổng quan
+Level
+Tên
+Mục đích
+Màu hiển thị (UI)
+Ví dụ
+Lv1
+Achievement (達成)
+Khen thưởng, tạo động lực
+Tích cực
+"Bạn đã duy trì 7 ngày liên tiếp!"
+Lv2
+Advice (アドバイス)
+Gợi ý cải thiện nhẹ
+Trung tính
+"Hôm nay uống thêm nước nhé"
+Lv3
+Warning (注意)
+Cảnh báo cần chú ý
+Cảnh báo
+"Cân nặng thay đổi khá nhanh"
+Lv4
+Critical (重要)
+Vấn đề nghiêm trọng
+Ưu tiên cao
+"Dữ liệu sức khỏe bất thường, hãy kiểm tra"
+
+
+Lv1: Achievement - Thành tích 
+Điều kiện
+Ví dụ:
+Đăng nhập liên tục
+login_streak >= 7
+Feedback:
+🎉 7日連続で健康記録を続けています！
+素晴らしい習慣です。
+
+Nhập đủ dữ liệu trong ngày
+Điều kiện:
+weight = OK
+sleep = OK
+water = OK
+step = OK
+memo = OK
+Feedback:
+今日の健康記録をすべて完了しました！
+Cân nặng cải thiện
+Ví dụ:
+7 ngày trước: 70kg
+Hôm nay: 69kg
+Feedback:
+1週間で1kg減りました。
+無理なく続けられています。
+
+Lv2: Advice - Gợi ý
+Mục đích
+Không nói user sai.
+Chỉ đưa ra hành động nhỏ.
+
+Ví dụ Weight
+Dữ liệu:
+3 ngày không nhập cân nặng
+Không nói:
+❌
+体重を入力してください
+Nên:
+最近体重記録がありません。
+今日の状態を記録してみましょう。
+Water
+Điều kiện:
+water < target * 80%
+Ví dụ:
+Mục tiêu:
+2000ml
+Hiện tại:
+1400ml
+Feedback:
+あと600mlで今日の目標達成です。
+Step
+step < daily_goal
+Feedback:
+あと2000歩で目標達成です。
+少し散歩してみませんか？
+Lv3: Warning - Cảnh báo
+Mục đích
+Cho user biết có sự bất thường.
+Nhưng không gây sợ hãi.
+
+Weight
+Điều kiện:
+weight change > 3% trong 7 ngày
+Ví dụ:
+70kg
+
+↓
+
+67kg
+Feedback:
+最近の体重変化が大きいです。
+入力内容を確認してください。
+
+Sleep
+Điều kiện:
+sleep < 5h
+3 ngày liên tục
+Feedback:
+睡眠時間が短い日が続いています。
+休息時間を意識しましょう。
+
+Water
+Điều kiện:
+water < 50% target
+Feedback:
+水分量が少ないようです。
+こまめに水分補給しましょう。
+Lv4: Critical - Quan trọng
+Mục đích
+Chỉ dùng cho trường hợp đặc biệt.
+Không nên dùng nhiều.
+
+Weight
+Ví dụ:
+80kg
+
+↓
+
+65kg
+
+1 tuần
+Giảm:
+18.7%
+Feedback:
+急激な体重変化があります。
+健康状態を確認してください。
+
+Sleep
+Ví dụ:
+睡眠時間:
+2時間
+
+5日連続
+Feedback:
+睡眠不足が続いています。
+十分な休息を取ることをおすすめします。
+Database thiết kế
+Tôi sẽ thêm bảng:
+health_feedbacks
+CREATE TABLE health_feedbacks (
+
+ id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+ profile_id BIGINT NOT NULL,
+
+ category VARCHAR(20),
+ 
+ level INT NOT NULL,
+
+ title VARCHAR(100),
+
+ message TEXT,
+
+ created_at DATETIME,
+
+ read_flg BOOLEAN DEFAULT FALSE
+
+);
+
+Ví dụ dữ liệu:
+category
+level
+message
+LOGIN
+1
+7日連続達成！
+WATER
+2
+あと500mlで目標達成
+WEIGHT
+3
+体重変化が大きいです
+SLEEP
+4
+睡眠不足が続いています
+
+
+Rule ưu tiên
+Có một vấn đề quan trọng:
+Một ngày có thể có nhiều feedback.
+Ví dụ:
+User:
+Cân nặng tốt
+Nhưng ngủ 3 tiếng
+Uống thiếu nước
+Nếu hiển thị:
+🎉 Cân nặng tốt
+💧 Uống nước ít
+😴 Ngủ ít
+Một ngày nên hiển thị bao nhiêu feedback?
+Tôi đề xuất:
+Dashboard:
+Tối đa:
+3 feedback / ngày
+Ví dụ:
+🌟 今日の健康メッセージ
+
+1.
+睡眠時間が少ないようです
+(重要)
+
+2.
+あと500mlで水分目標達成
+(アドバイス)
+
+3.
+3日連続記録達成
+(達成)
+1. Không nhập dữ liệu giấc ngủ
+Tình huống Nếu user không nhập giấc ngủ thì Dashboard hiển thị gì? 
+Nên:
+睡眠データがありません
+昨日の睡眠を記録しましょう
+Hệ thống biết đây là ngủ qua ngày bằng cách nào? 
+Có lưu nhiều lần ngủ trong ngày không? 
+Cách 2: Nhiều record
+Tốt hơn:
+sleep_logs
+
+id
+profile_id
+sleep_type
+start_time
+end_time
+Ví dụ:
+type
+time
+NIGHT
+23:00-06:00
+NAP
+13:00-14:00
+
+Giấc ngủ kéo dài quá lâu
+Tình huống　ngủ quá lâu hoặc quá ít
+Cải thiện
+Validation:
+duration <= 24h
+Nếu:
+>16h
+thì cảnh báo:
+睡眠時間が長すぎます。
+入力内容を確認してください。
+
+Feedback thông minh
+Không:
+❌
+睡眠不足です
+Nên:
+睡眠時間が短いようです。
+今日は十分休息を取りましょう。
+Cải thiện
+Không cho.
+Validation:
+sleep_start <= now
+Feedback:
+未来の睡眠データは登録できません。
+Record: vị dụ bắt đầu ngủ tối ngày 9 sang đến ssángngayf 10 thì lưuu ngày 
+recorded_date = 07/10
+13. Timezone
+Tình huống
+Sau này app có người Nhật, Việt Nam.
+
+Câu hỏi
+Nếu đổi timezone thì sao?
+
+Cải thiện
+Lưu:
+LocalDateTime
+hoặc:
+UTC + timezone
+Ví dụ:
+Asia/Tokyo
+Case 1: Ngủ đủ
+Điều kiện:
+7h <= sleep <= 9h
+Feedback Lv1:
+良い睡眠時間です。
+今日も健康管理を続けましょう。
+Case 2: Thiếu ngủ
+Điều kiện:
+sleep < 6h
+Feedback Lv2:
+睡眠時間が少し短いようです。
+早めに休むことを意識しましょう。
+Case 3: Thiếu ngủ nhiều ngày
+Điều kiện:
+<6h
+3 ngày liên tiếp
+Feedback Lv3:
+睡眠不足が続いています。
+休息時間を見直しましょう。
+Case 4: Cải thiện
+Tuần trước:
+5h
+Tuần này:
+7h
+Feedback Lv1:
+睡眠習慣が改善しています！
+16. Những câu hỏi chắc chắn bị hỏi khi review Sleep
+Câu hỏi
+Mục đích
+Ngủ qua ngày xử lý thế nào?
+Kiểm tra logic thời gian
+Tính giờ ngủ ở đâu?
+Kiểm tra backend design
+Có lưu ngủ trưa không?
+Kiểm tra nghiệp vụ
+Nếu không nhập dữ liệu?
+UX
+Ngủ 24 tiếng thì sao?
+Validation
+Ngủ 2 tiếng thì block không?
+Business rule
+Có sửa/xóa được không?
+CRUD completeness
+Có duplicate không?
+Data integrity
+Ngày ngủ tính theo ngày nào?
+Data modeling
+Có dùng device sau này không?
+Mở rộng hệ thống
+
+sleep_logs
+
+id
+profile_id
+
+sleep_date
+
+sleep_start_datetime
+sleep_end_datetime
+
+duration_minutes
+
+sleep_type
+
+source
+
+created_at
+updated_at
+Lv1: ngủ tốt / cải thiện
+Lv2: cần chú ý nhẹ
+Lv3: thiếu ngủ kéo dài
+Lv4: bất thường nghiêm trọng
+
+Vấn đề 1: Một ngày uống nhiều lần thì lưu như thế nào?
+Đây chính là câu bạn bị hỏi.
+water_logs
+id profile_id drink_time amount_ml drink_type memo created_at
+Người review có thể hỏi
+Nếu một ngày nhập 20 lần thì sao?
+Trả lời:
+Không vấn đề gì. Vì mỗi lần uống nước là một bản ghi độc lập. Dashboard sẽ tính tổng lượng nước trong ngày bằng cách cộng tất cả các bản ghi của ngày đó.
+Đây là câu trả lời rất "đúng nghiệp vụ".
+💧 Lượng nước hằng ngày
+Lượng nước có thể đến từ:
+✅ Nước lọc
+✅ Trà không đường
+✅ Sữa
+✅ Canh
+✅ Nước từ rau và trái cây
+Lưu ý:
+Đây chỉ là hướng dẫn tham khảo.
+Nếu không chắc chắn, hãy nhập lượng nước uống trực tiếp.
+Dashboard:
+Today's drinks
+Water 1200ml
+Tea 300ml
+Milk 200ml
+Một ngày nhập bao nhiêu lần?
+Không giới hạn.
+Có nên cảnh báo khi uống quá nhiều?
+Ví dụ:
+7000ml mặc đinh 1 ngày nên uống 2000l
+Feedback:
+Hôm nay lượng nước của bạn khá cao. Vui lòng kiểm tra lại dữ liệu vừa nhập.
+Dashboard:
+██████████░░░░░
+1500 / 2000ml
+Feedback:
+Bạn chỉ còn 500ml nữa là đạt mục tiêu hôm nay.
+water_logs
+id profile_id drink_datetime amount_ml drink_type memo created_at
+Dashboard
+Hiển thị:
+Hôm nay
+Đã uống
+1450ml
+Mục tiêu
+2000ml
+Còn lại
+550ml
+Quy tắc nghiệp vụ
+Một lần uống = một bản ghi.
+Không giới hạn số lần nhập trong ngày.
+Dashboard dùng SUM(amount_ml) để tính tổng.
+Cho phép sửa và xóa từng lần uống.
+Có hướng dẫn ngay trên màn hình rằng lượng nước có thể đến từ nước lọc, trà, sữa, canh và các thực phẩm nhiều nước, nhưng người dùng tự quyết định lượng muốn ghi nhận, vì ứng dụng không tự động tính nước từ thực phẩm.
+Nếu bị senpai hỏi:
+"Tại sao em không chỉ lưu một record mỗi ngày?"
+Bạn có thể trả lời:
+"Trong thực tế, người dùng uống nước nhiều lần trong ngày và thường không biết tổng lượng ngay từ đầu. Vì vậy em thiết kế mỗi lần uống là một bản ghi riêng. Khi hiển thị Dashboard, hệ thống sẽ cộng tất cả lượng nước của ngày đó để ra tổng lượng nước hằng ngày. Thiết kế này cũng giúp người dùng dễ sửa hoặc xóa từng lần nhập mà không ảnh hưởng đến các lần khác."
+
+
