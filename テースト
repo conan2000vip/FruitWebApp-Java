@@ -1,534 +1,899 @@
-1 Weight Log
-Q1. một ngày user cân nhiều lần thì xử lý thế nào(1 ngày chỉ cho phép nhật 1 lần hay cho phép nhập nhiều lần )
-     cho phép nhiều bản ghi , khi hiển thị thì tính trung bình ngày
-Q2. Nếu user nhập ngày hôm qua nhưng hôm nay mới nhập thì sao? 
-    Cho phép nhập ngày quá khứ
-    Không cho phép ngày tương lai
-Q3. User nhập cân nặng trong tương lai thì sao? 
-    measured_date <= today
-    未来の日付は登録できません
-nhập cân nặng bằng 0 đây là dữ liệu sai bắt buộc nhập lớn hơn 
-Feedback
-体重は1kg以上で入力してください。
-Feedback nhập cân nặng quá thấp (trẻ sơ sinh)
-Popup:
-入力した体重が低すぎます。
-5kgで登録しますか？
-Validation
-Ví dụ nhập sai đơn vị 500kg
-1kg <= weight <= 300kg
-Feedback
-体重の値を確認してください。
-Feedback
-Nếu sai format: nhập số thập phân 60.5555 quá nhiều chỉ cho phép 1 số 
-体重は小数点1桁まで入力してください。
-Backend:
-check type. nhập chữ không cho nhập
-Feedback
-数字で入力してください。
-Một ngày nhập nhiều lần 
-Table: thêm cột measured-at cho phép nhập nhiều lần trong ngày, biểu đồ hiển thị theo mốc thời gian nhập , lưu lịch sử đầy đủ Biểu đồ sẽ có nhiều điểm trong cùng 1 ngày. BIM cũng thay đổi theo từng lần nhập liệu
-Ví dụ ngày 2026-07-10 có 3 điểm:
-08:15 → 50.2
-14:30 → 50.0
-21:10 → 49.8
-👉 Biểu đồ sẽ vẽ 3 điểm trên cùng ngày. ưu điểm là chính xác, dữ liệu thật 100 phần trăm
-weight_logs
+# データベース設計：健康管理Webアプリ
 
-id
-profile_id
-weight
-measured_at
-Nhập ngày trong tương lai 
-Feedback
-measuredDate <= LocalDate.now()
-未来の日付は登録できません。
-Nhập dữ liệu quá cũ 
-Cách xử lý
-Không block.
-Nhưng cảnh báo:
-古い日付のデータです。
-登録しますか？
+## 1. Danh sách 9 bảng
 
-Ngày đo và ngày nhập khác nhau User nhập:
-測定日:
-2026/07/09
+| STT | Tên bảng chuẩn hóa | Tên bảng cũ   | Mục đích                            |
+| --: | ------------------ | ------------- | ----------------------------------- |
+|   1 | `users`            | `users`       | Quản lý tài khoản đăng nhập         |
+|   2 | `auth_tokens`      | `auth_tokens` | Quản lý token đăng nhập và xác thực |
+|   3 | `profiles`         | `profiles`    | Quản lý hồ sơ sức khỏe              |
+|   4 | `weight_logs`      | `weightlogs`  | Lưu lịch sử cân nặng                |
+|   5 | `sleep_logs`       | `sleeplogs`   | Lưu lịch sử giấc ngủ                |
+|   6 | `water_logs`       | `waterlogs`   | Lưu từng lần uống nước              |
+|   7 | `step_logs`        | `steplogs`    | Lưu tổng số bước mỗi ngày           |
+|   8 | `memo_logs`        | `memologs`    | Lưu ghi chú sức khỏe                |
+|   9 | `health_feedbacks` | Chưa có       | Lưu feedback thông minh             |
 
-登録日:
-2026/07/10
-Feedback
-Trước khi xóa:
-このデータを削除しますか？
-Cân nặng giảm/tăng quá nhanh
-Tình huống
-Hôm qua:
-80kg
-Hôm nay:
-50kg
-Vấn đề
-Có thể:
-Nhập sai
-Có vấn đề sức khỏe
-Không nên block.
-Hiển thị cảnh báo:
-前回の体重との差が大きいです。
-入力内容を確認してください。
-Mất kết nối khi bấm đăng ký 
-Tình huống
-User click:
-登録
-Internet mất.
-Vấn đề
-Có thể:
-User bấm nhiều lần
-Tạo duplicate
-Xử lý:
-Backend transaction.
-Feedback:
-登録に失敗しました。
-もう一度お試しください。
-Tổng hợp các validation cho Weight
-Vấn đề
-Loại xử lý
-Không nhập
-Error hoặc Empty
-0kg
-Error
-Âm
-Error
-Quá nhỏ
-Warning
-Quá lớn
-Warning/Error
-Sai format
-Error
-Chữ
-Error
-Ngày tương lai
-Error
-Ngày quá khứ
-Cho phép
-Nhập nhiều lần/ngày
-Business rule
-Update
-Cho phép
-Delete
-Confirm
-Giảm/tăng bất thường
-Warning
-Duplicate request
-Backend xử lý
+Đề xuất thống nhất tên bảng theo dạng `snake_case`.
 
-Thiết kế 4 cấp độ Feedback
-Tổng quan
-Level
-Tên
-Mục đích
-Màu hiển thị (UI)
-Ví dụ
-Lv1
-Achievement (達成)
-Khen thưởng, tạo động lực
-Tích cực
-"Bạn đã duy trì 7 ngày liên tiếp!"
-Lv2
-Advice (アドバイス)
-Gợi ý cải thiện nhẹ
-Trung tính
-"Hôm nay uống thêm nước nhé"
-Lv3
-Warning (注意)
-Cảnh báo cần chú ý
-Cảnh báo
-"Cân nặng thay đổi khá nhanh"
-Lv4
-Critical (重要)
-Vấn đề nghiêm trọng
-Ưu tiên cao
-"Dữ liệu sức khỏe bất thường, hãy kiểm tra"
+---
 
+# 2. Quan hệ giữa các bảng
 
-Lv1: Achievement - Thành tích 
-Điều kiện
+```text
+users
+ ├── auth_tokens
+ └── profiles
+      ├── weight_logs
+      ├── sleep_logs
+      ├── water_logs
+      ├── step_logs
+      ├── memo_logs
+      └── health_feedbacks
+```
+
+Một `user` có thể có nhiều `profile`.
+
 Ví dụ:
-Đăng nhập liên tục
-login_streak >= 7
-Feedback:
-🎉 7日連続で健康記録を続けています！
-素晴らしい習慣です。
 
-Nhập đủ dữ liệu trong ngày
-Điều kiện:
-weight = OK
-sleep = OK
-water = OK
-step = OK
-memo = OK
-Feedback:
-今日の健康記録をすべて完了しました！
-Cân nặng cải thiện
+* Profile của chính người dùng.
+* Profile của cha mẹ.
+* Profile của con.
+* Profile của thành viên khác trong gia đình.
+
+Tất cả dữ liệu sức khỏe liên kết với `profile_id`, không liên kết trực tiếp với `user_id`.
+
+---
+
+# 3. Bảng `users`
+
+## Mục đích
+
+Lưu thông tin tài khoản đăng nhập.
+
+## Các cột đề xuất
+
+| Cột                 | Kiểu dữ liệu | Bắt buộc | Mô tả                    |
+| ------------------- | ------------ | -------: | ------------------------ |
+| `id`                | BIGINT       |       Có | Khóa chính               |
+| `email`             | VARCHAR(255) |       Có | Email đăng nhập          |
+| `password_hash`     | VARCHAR(255) |       Có | Mật khẩu đã mã hóa       |
+| `status`            | VARCHAR(20)  |       Có | Trạng thái tài khoản     |
+| `locale`            | VARCHAR(10)  |       Có | Ngôn ngữ hiển thị        |
+| `timezone`          | VARCHAR(50)  |       Có | Múi giờ người dùng       |
+| `email_verified_at` | DATETIME     |    Không | Thời điểm xác thực email |
+| `last_login_at`     | DATETIME     |    Không | Lần đăng nhập gần nhất   |
+| `created_at`        | DATETIME     |       Có | Ngày tạo                 |
+| `updated_at`        | DATETIME     |       Có | Ngày cập nhật            |
+| `deleted_at`        | DATETIME     |    Không | Soft delete              |
+
+## Giá trị tham khảo
+
+```text
+status:
+ACTIVE
+LOCKED
+INACTIVE
+```
+
+```text
+locale:
+ja
+vi
+en
+```
+
+```text
+timezone:
+Asia/Tokyo
+Asia/Ho_Chi_Minh
+```
+
+## SQL
+
+```sql
+CREATE TABLE users (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    email VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+
+    locale VARCHAR(10) NOT NULL DEFAULT 'ja',
+    timezone VARCHAR(50) NOT NULL DEFAULT 'Asia/Tokyo',
+
+    email_verified_at DATETIME NULL,
+    last_login_at DATETIME NULL,
+
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    deleted_at DATETIME NULL,
+
+    CONSTRAINT uk_users_email UNIQUE (email)
+);
+```
+
+---
+
+# 4. Bảng `auth_tokens`
+
+## Mục đích
+
+Lưu token phục vụ:
+
+* Đăng nhập web.
+* Refresh token.
+* Xác thực email.
+* Đặt lại mật khẩu.
+
+Không lưu token gốc dưới dạng plain text. Chỉ lưu giá trị đã hash.
+
+## Các cột đề xuất
+
+| Cột            | Kiểu dữ liệu | Bắt buộc | Mô tả                |
+| -------------- | ------------ | -------: | -------------------- |
+| `id`           | BIGINT       |       Có | Khóa chính           |
+| `user_id`      | BIGINT       |       Có | Người sở hữu token   |
+| `token_hash`   | VARCHAR(255) |       Có | Token đã hash        |
+| `token_type`   | VARCHAR(30)  |       Có | Loại token           |
+| `expires_at`   | DATETIME     |       Có | Thời điểm hết hạn    |
+| `last_used_at` | DATETIME     |    Không | Lần sử dụng gần nhất |
+| `revoked_at`   | DATETIME     |    Không | Thời điểm thu hồi    |
+| `created_at`   | DATETIME     |       Có | Ngày tạo             |
+
+## Loại token
+
+```text
+REFRESH_TOKEN
+PASSWORD_RESET
+EMAIL_VERIFICATION
+```
+
+## SQL
+
+```sql
+CREATE TABLE auth_tokens (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    user_id BIGINT NOT NULL,
+
+    token_hash VARCHAR(255) NOT NULL,
+    token_type VARCHAR(30) NOT NULL,
+
+    expires_at DATETIME NOT NULL,
+    last_used_at DATETIME NULL,
+    revoked_at DATETIME NULL,
+
+    created_at DATETIME NOT NULL,
+
+    CONSTRAINT uk_auth_tokens_hash
+        UNIQUE (token_hash),
+
+    CONSTRAINT fk_auth_tokens_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+);
+```
+
+---
+
+# 5. Bảng `profiles`
+
+## Mục đích
+
+Lưu thông tin hồ sơ sức khỏe.
+
+Một tài khoản có thể có nhiều profile.
+
+## Các cột đề xuất
+
+| Cột                   | Kiểu dữ liệu | Bắt buộc | Mô tả                   |
+| --------------------- | ------------ | -------: | ----------------------- |
+| `id`                  | BIGINT       |       Có | Khóa chính              |
+| `user_id`             | BIGINT       |       Có | Chủ tài khoản           |
+| `display_name`        | VARCHAR(100) |       Có | Tên profile             |
+| `birth_date`          | DATE         |    Không | Ngày sinh               |
+| `gender`              | VARCHAR(20)  |    Không | Giới tính               |
+| `height_cm`           | DECIMAL(5,1) |    Không | Chiều cao               |
+| `target_weight_kg`    | DECIMAL(5,1) |    Không | Cân nặng mục tiêu       |
+| `daily_water_goal_ml` | INT          |       Có | Mục tiêu nước hằng ngày |
+| `daily_step_goal`     | INT          |       Có | Mục tiêu bước chân      |
+| `created_at`          | DATETIME     |       Có | Ngày tạo                |
+| `updated_at`          | DATETIME     |       Có | Ngày cập nhật           |
+| `deleted_at`          | DATETIME     |    Không | Soft delete             |
+
+## SQL
+
+```sql
+CREATE TABLE profiles (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    user_id BIGINT NOT NULL,
+
+    display_name VARCHAR(100) NOT NULL,
+
+    birth_date DATE NULL,
+    gender VARCHAR(20) NULL,
+
+    height_cm DECIMAL(5,1) NULL,
+    target_weight_kg DECIMAL(5,1) NULL,
+
+    daily_water_goal_ml INT NOT NULL DEFAULT 2000,
+    daily_step_goal INT NOT NULL DEFAULT 8000,
+
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    deleted_at DATETIME NULL,
+
+    CONSTRAINT chk_profile_height
+        CHECK (
+            height_cm IS NULL
+            OR height_cm > 0
+        ),
+
+    CONSTRAINT chk_profile_water_goal
+        CHECK (daily_water_goal_ml > 0),
+
+    CONSTRAINT chk_profile_step_goal
+        CHECK (daily_step_goal >= 0),
+
+    CONSTRAINT fk_profiles_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+);
+```
+
+---
+
+# 6. Bảng `weight_logs`
+
+## Mục đích
+
+Lưu từng lần người dùng cân.
+
+Một ngày có thể có nhiều bản ghi.
+
 Ví dụ:
-7 ngày trước: 70kg
-Hôm nay: 69kg
-Feedback:
-1週間で1kg減りました。
-無理なく続けられています。
 
-Lv2: Advice - Gợi ý
-Mục đích
-Không nói user sai.
-Chỉ đưa ra hành động nhỏ.
+```text
+08:15 → 50.2kg
+14:30 → 50.0kg
+21:10 → 49.8kg
+```
 
-Ví dụ Weight
-Dữ liệu:
-3 ngày không nhập cân nặng
-Không nói:
-❌
-体重を入力してください
-Nên:
-最近体重記録がありません。
-今日の状態を記録してみましょう。
-Water
-Điều kiện:
-water < target * 80%
-Ví dụ:
-Mục tiêu:
-2000ml
-Hiện tại:
-1400ml
-Feedback:
-あと600mlで今日の目標達成です。
-Step
-step < daily_goal
-Feedback:
-あと2000歩で目標達成です。
-少し散歩してみませんか？
-Lv3: Warning - Cảnh báo
-Mục đích
-Cho user biết có sự bất thường.
-Nhưng không gây sợ hãi.
+## Các cột đề xuất
 
-Weight
-Điều kiện:
-weight change > 3% trong 7 ngày
-Ví dụ:
-70kg
+| Cột                  | Kiểu dữ liệu | Bắt buộc | Mô tả                      |
+| -------------------- | ------------ | -------: | -------------------------- |
+| `id`                 | BIGINT       |       Có | Khóa chính                 |
+| `profile_id`         | BIGINT       |       Có | Profile sở hữu dữ liệu     |
+| `weight_kg`          | DECIMAL(5,1) |       Có | Cân nặng                   |
+| `height_cm_snapshot` | DECIMAL(5,1) |    Không | Chiều cao tại thời điểm đo |
+| `bmi_value`          | DECIMAL(4,1) |    Không | BMI tại thời điểm đo       |
+| `measured_at`        | DATETIME     |       Có | Ngày giờ cân               |
+| `created_at`         | DATETIME     |       Có | Ngày nhập                  |
+| `updated_at`         | DATETIME     |       Có | Ngày sửa                   |
+| `deleted_at`         | DATETIME     |    Không | Soft delete                |
 
-↓
+Nên lưu `height_cm_snapshot` và `bmi_value` để BMI lịch sử không bị thay đổi khi người dùng sửa chiều cao trong profile.
 
-67kg
-Feedback:
-最近の体重変化が大きいです。
-入力内容を確認してください。
+## SQL
 
-Sleep
-Điều kiện:
-sleep < 5h
-3 ngày liên tục
-Feedback:
-睡眠時間が短い日が続いています。
-休息時間を意識しましょう。
+```sql
+CREATE TABLE weight_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
 
-Water
-Điều kiện:
-water < 50% target
-Feedback:
-水分量が少ないようです。
-こまめに水分補給しましょう。
-Lv4: Critical - Quan trọng
-Mục đích
-Chỉ dùng cho trường hợp đặc biệt.
-Không nên dùng nhiều.
+    profile_id BIGINT NOT NULL,
 
-Weight
-Ví dụ:
-80kg
+    weight_kg DECIMAL(5,1) NOT NULL,
 
-↓
+    height_cm_snapshot DECIMAL(5,1) NULL,
+    bmi_value DECIMAL(4,1) NULL,
 
-65kg
+    measured_at DATETIME NOT NULL,
 
-1 tuần
-Giảm:
-18.7%
-Feedback:
-急激な体重変化があります。
-健康状態を確認してください。
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    deleted_at DATETIME NULL,
 
-Sleep
-Ví dụ:
-睡眠時間:
-2時間
+    CONSTRAINT chk_weight_value
+        CHECK (
+            weight_kg >= 1
+            AND weight_kg <= 300
+        ),
 
-5日連続
-Feedback:
-睡眠不足が続いています。
-十分な休息を取ることをおすすめします。
-Database thiết kế
-Tôi sẽ thêm bảng:
-health_feedbacks
-CREATE TABLE health_feedbacks (
-
- id BIGINT AUTO_INCREMENT PRIMARY KEY,
-
- profile_id BIGINT NOT NULL,
-
- category VARCHAR(20),
- 
- level INT NOT NULL,
-
- title VARCHAR(100),
-
- message TEXT,
-
- created_at DATETIME,
-
- read_flg BOOLEAN DEFAULT FALSE
-
+    CONSTRAINT fk_weight_logs_profile
+        FOREIGN KEY (profile_id)
+        REFERENCES profiles(id)
+        ON DELETE CASCADE
 );
 
-Ví dụ dữ liệu:
-category
-level
-message
-LOGIN
-1
-7日連続達成！
-WATER
-2
-あと500mlで目標達成
-WEIGHT
-3
-体重変化が大きいです
-SLEEP
-4
-睡眠不足が続いています
+CREATE INDEX idx_weight_logs_profile_measured
+ON weight_logs(profile_id, measured_at);
+```
 
+Không đặt unique theo ngày vì một ngày được phép cân nhiều lần.
 
-Rule ưu tiên
-Có một vấn đề quan trọng:
-Một ngày có thể có nhiều feedback.
-Ví dụ:
-User:
-Cân nặng tốt
-Nhưng ngủ 3 tiếng
-Uống thiếu nước
-Nếu hiển thị:
-🎉 Cân nặng tốt
-💧 Uống nước ít
-😴 Ngủ ít
-Một ngày nên hiển thị bao nhiêu feedback?
-Tôi đề xuất:
-Dashboard:
-Tối đa:
-3 feedback / ngày
-Ví dụ:
-🌟 今日の健康メッセージ
+---
 
-1.
-睡眠時間が少ないようです
-(重要)
+# 7. Bảng `sleep_logs`
 
-2.
-あと500mlで水分目標達成
-(アドバイス)
+## Mục đích
 
-3.
-3日連続記録達成
-(達成)
-1. Không nhập dữ liệu giấc ngủ
-Tình huống Nếu user không nhập giấc ngủ thì Dashboard hiển thị gì? 
-Nên:
-睡眠データがありません
-昨日の睡眠を記録しましょう
-Hệ thống biết đây là ngủ qua ngày bằng cách nào? 
-Có lưu nhiều lần ngủ trong ngày không? 
-Cách 2: Nhiều record
-Tốt hơn:
-sleep_logs
+Lưu từng giấc ngủ.
 
-id
-profile_id
-sleep_type
-start_time
-end_time
-Ví dụ:
-type
-time
+Một ngày có thể có:
+
+* Giấc ngủ đêm.
+* Giấc ngủ trưa.
+* Giấc ngủ khác.
+
+## Các cột đề xuất
+
+| Cột                | Kiểu dữ liệu | Bắt buộc | Mô tả                  |
+| ------------------ | ------------ | -------: | ---------------------- |
+| `id`               | BIGINT       |       Có | Khóa chính             |
+| `profile_id`       | BIGINT       |       Có | Profile sở hữu dữ liệu |
+| `sleep_date`       | DATE         |       Có | Ngày tính giấc ngủ     |
+| `sleep_start_at`   | DATETIME     |       Có | Thời điểm bắt đầu      |
+| `sleep_end_at`     | DATETIME     |       Có | Thời điểm kết thúc     |
+| `duration_minutes` | INT          |       Có | Tổng số phút ngủ       |
+| `sleep_type`       | VARCHAR(20)  |       Có | Loại giấc ngủ          |
+| `created_at`       | DATETIME     |       Có | Ngày nhập              |
+| `updated_at`       | DATETIME     |       Có | Ngày sửa               |
+| `deleted_at`       | DATETIME     |    Không | Soft delete            |
+
+## Loại giấc ngủ
+
+```text
 NIGHT
-23:00-06:00
 NAP
-13:00-14:00
+OTHER
+```
 
-Giấc ngủ kéo dài quá lâu
-Tình huống　ngủ quá lâu hoặc quá ít
-Cải thiện
-Validation:
-duration <= 24h
-Nếu:
->16h
-thì cảnh báo:
-睡眠時間が長すぎます。
-入力内容を確認してください。
+Với giấc ngủ qua ngày:
 
-Feedback thông minh
-Không:
-❌
-睡眠不足です
-Nên:
-睡眠時間が短いようです。
-今日は十分休息を取りましょう。
-Cải thiện
-Không cho.
-Validation:
-sleep_start <= now
-Feedback:
-未来の睡眠データは登録できません。
-Record: vị dụ bắt đầu ngủ tối ngày 9 sang đến ssángngayf 10 thì lưuu ngày 
-recorded_date = 07/10
-13. Timezone
-Tình huống
-Sau này app có người Nhật, Việt Nam.
+```text
+2026/07/09 23:00
+→ 2026/07/10 06:00
+```
 
-Câu hỏi
-Nếu đổi timezone thì sao?
+Quy ước:
 
-Cải thiện
-Lưu:
-LocalDateTime
-hoặc:
-UTC + timezone
+```text
+sleep_date = 2026/07/10
+```
+
+## SQL
+
+```sql
+CREATE TABLE sleep_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    profile_id BIGINT NOT NULL,
+
+    sleep_date DATE NOT NULL,
+
+    sleep_start_at DATETIME NOT NULL,
+    sleep_end_at DATETIME NOT NULL,
+
+    duration_minutes INT NOT NULL,
+
+    sleep_type VARCHAR(20) NOT NULL,
+
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    deleted_at DATETIME NULL,
+
+    CONSTRAINT chk_sleep_duration
+        CHECK (
+            duration_minutes > 0
+            AND duration_minutes <= 1440
+        ),
+
+    CONSTRAINT chk_sleep_datetime
+        CHECK (sleep_start_at < sleep_end_at),
+
+    CONSTRAINT fk_sleep_logs_profile
+        FOREIGN KEY (profile_id)
+        REFERENCES profiles(id)
+        ON DELETE CASCADE
+);
+
+CREATE INDEX idx_sleep_logs_profile_date
+ON sleep_logs(profile_id, sleep_date);
+```
+
+---
+
+# 8. Bảng `water_logs`
+
+## Mục đích
+
+Lưu từng lần uống nước.
+
+Một ngày có thể có nhiều record và Dashboard sẽ tính tổng bằng:
+
+```sql
+SUM(amount_ml)
+```
+
+## Các cột đề xuất
+
+| Cột          | Kiểu dữ liệu | Bắt buộc | Mô tả                  |
+| ------------ | ------------ | -------: | ---------------------- |
+| `id`         | BIGINT       |       Có | Khóa chính             |
+| `profile_id` | BIGINT       |       Có | Profile sở hữu dữ liệu |
+| `drink_at`   | DATETIME     |       Có | Thời điểm uống         |
+| `amount_ml`  | INT          |       Có | Lượng nước             |
+| `drink_type` | VARCHAR(20)  |       Có | Loại đồ uống           |
+| `memo`       | VARCHAR(500) |    Không | Ghi chú                |
+| `created_at` | DATETIME     |       Có | Ngày nhập              |
+| `updated_at` | DATETIME     |       Có | Ngày sửa               |
+| `deleted_at` | DATETIME     |    Không | Soft delete            |
+
+## Loại đồ uống
+
+```text
+WATER
+TEA
+MILK
+SOUP
+OTHER
+```
+
+## SQL
+
+```sql
+CREATE TABLE water_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    profile_id BIGINT NOT NULL,
+
+    drink_at DATETIME NOT NULL,
+
+    amount_ml INT NOT NULL,
+    drink_type VARCHAR(20) NOT NULL,
+
+    memo VARCHAR(500) NULL,
+
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    deleted_at DATETIME NULL,
+
+    CONSTRAINT chk_water_amount
+        CHECK (
+            amount_ml > 0
+            AND amount_ml <= 5000
+        ),
+
+    CONSTRAINT fk_water_logs_profile
+        FOREIGN KEY (profile_id)
+        REFERENCES profiles(id)
+        ON DELETE CASCADE
+);
+
+CREATE INDEX idx_water_logs_profile_drink
+ON water_logs(profile_id, drink_at);
+```
+
+---
+
+# 9. Bảng `step_logs`
+
+## Mục đích
+
+Lưu tổng số bước trong một ngày.
+
+Vì webapp nhập thủ công nên:
+
+```text
+Một profile + một ngày = một record
+```
+
+Nếu người dùng nhập lại thì update record hiện tại.
+
+## Các cột đề xuất
+
+| Cột          | Kiểu dữ liệu | Bắt buộc | Mô tả                   |
+| ------------ | ------------ | -------: | ----------------------- |
+| `id`         | BIGINT       |       Có | Khóa chính              |
+| `profile_id` | BIGINT       |       Có | Profile sở hữu dữ liệu  |
+| `step_date`  | DATE         |       Có | Ngày của số bước        |
+| `steps`      | INT          |       Có | Tổng số bước trong ngày |
+| `created_at` | DATETIME     |       Có | Ngày nhập               |
+| `updated_at` | DATETIME     |       Có | Ngày sửa                |
+| `deleted_at` | DATETIME     |    Không | Soft delete             |
+
+## SQL
+
+```sql
+CREATE TABLE step_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    profile_id BIGINT NOT NULL,
+
+    step_date DATE NOT NULL,
+
+    steps INT NOT NULL,
+
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    deleted_at DATETIME NULL,
+
+    CONSTRAINT chk_step_value
+        CHECK (
+            steps >= 0
+            AND steps <= 200000
+        ),
+
+    CONSTRAINT uk_step_logs_profile_date
+        UNIQUE (profile_id, step_date),
+
+    CONSTRAINT fk_step_logs_profile
+        FOREIGN KEY (profile_id)
+        REFERENCES profiles(id)
+        ON DELETE CASCADE
+);
+```
+
+Nếu sử dụng soft delete, khi người dùng đăng ký lại ngày đã xóa, backend nên khôi phục record cũ:
+
+```text
+deleted_at = NULL
+```
+
+thay vì insert một record mới.
+
+---
+
+# 10. Bảng `memo_logs`
+
+## Mục đích
+
+Lưu ghi chú sức khỏe.
+
+Một ngày được phép có nhiều Memo.
+
+## Các cột đề xuất
+
+| Cột             | Kiểu dữ liệu | Bắt buộc | Mô tả                     |
+| --------------- | ------------ | -------: | ------------------------- |
+| `id`            | BIGINT       |       Có | Khóa chính                |
+| `profile_id`    | BIGINT       |       Có | Profile sở hữu dữ liệu    |
+| `memo_datetime` | DATETIME     |       Có | Thời điểm nội dung xảy ra |
+| `content`       | TEXT         |       Có | Nội dung Memo             |
+| `category`      | VARCHAR(30)  |    Không | Phân loại Memo            |
+| `created_at`    | DATETIME     |       Có | Ngày nhập                 |
+| `updated_at`    | DATETIME     |       Có | Ngày sửa                  |
+| `deleted_at`    | DATETIME     |    Không | Soft delete               |
+
+## Category tham khảo
+
+```text
+GENERAL
+FOOD
+EXERCISE
+MEDICINE
+MOOD
+SYMPTOM
+```
+
+Nếu MVP chưa có chức năng chọn category thì cột này có thể để null.
+
+## SQL
+
+```sql
+CREATE TABLE memo_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    profile_id BIGINT NOT NULL,
+
+    memo_datetime DATETIME NOT NULL,
+
+    content TEXT NOT NULL,
+    category VARCHAR(30) NULL,
+
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    deleted_at DATETIME NULL,
+
+    CONSTRAINT fk_memo_logs_profile
+        FOREIGN KEY (profile_id)
+        REFERENCES profiles(id)
+        ON DELETE CASCADE
+);
+
+CREATE INDEX idx_memo_logs_profile_datetime
+ON memo_logs(profile_id, memo_datetime);
+```
+
+Độ dài Memo tối đa 2.000 ký tự nên được kiểm tra ở frontend và backend.
+
+---
+
+# 11. Bảng `health_feedbacks`
+
+## Mục đích
+
+Lưu feedback thông minh được hệ thống tạo ra từ dữ liệu sức khỏe.
+
 Ví dụ:
-Asia/Tokyo
-Case 1: Ngủ đủ
-Điều kiện:
-7h <= sleep <= 9h
-Feedback Lv1:
-良い睡眠時間です。
-今日も健康管理を続けましょう。
-Case 2: Thiếu ngủ
-Điều kiện:
-sleep < 6h
-Feedback Lv2:
-睡眠時間が少し短いようです。
-早めに休むことを意識しましょう。
-Case 3: Thiếu ngủ nhiều ngày
-Điều kiện:
-<6h
-3 ngày liên tiếp
-Feedback Lv3:
-睡眠不足が続いています。
-休息時間を見直しましょう。
-Case 4: Cải thiện
-Tuần trước:
-5h
-Tuần này:
-7h
-Feedback Lv1:
-睡眠習慣が改善しています！
-16. Những câu hỏi chắc chắn bị hỏi khi review Sleep
-Câu hỏi
-Mục đích
-Ngủ qua ngày xử lý thế nào?
-Kiểm tra logic thời gian
-Tính giờ ngủ ở đâu?
-Kiểm tra backend design
-Có lưu ngủ trưa không?
-Kiểm tra nghiệp vụ
-Nếu không nhập dữ liệu?
-UX
-Ngủ 24 tiếng thì sao?
-Validation
-Ngủ 2 tiếng thì block không?
-Business rule
-Có sửa/xóa được không?
-CRUD completeness
-Có duplicate không?
-Data integrity
-Ngày ngủ tính theo ngày nào?
-Data modeling
-Có dùng device sau này không?
-Mở rộng hệ thống
 
-sleep_logs
+```text
+WEIGHT Lv3
+最近の体重変化が大きいです。
+```
 
+```text
+WATER Lv2
+あと500mlで今日の目標達成です。
+```
+
+## Các cột đề xuất
+
+| Cột             | Kiểu dữ liệu | Bắt buộc | Mô tả                    |
+| --------------- | ------------ | -------: | ------------------------ |
+| `id`            | BIGINT       |       Có | Khóa chính               |
+| `profile_id`    | BIGINT       |       Có | Profile nhận feedback    |
+| `category`      | VARCHAR(20)  |       Có | Nhóm dữ liệu             |
+| `level`         | TINYINT      |       Có | Cấp độ 1–4               |
+| `rule_code`     | VARCHAR(50)  |       Có | Mã rule tạo feedback     |
+| `title`         | VARCHAR(100) |    Không | Tiêu đề                  |
+| `message`       | TEXT         |       Có | Nội dung Feedback        |
+| `target_date`   | DATE         |    Không | Ngày mà Feedback áp dụng |
+| `target_type`   | VARCHAR(20)  |    Không | Loại record nguồn        |
+| `target_log_id` | BIGINT       |    Không | ID record nguồn          |
+| `dedupe_key`    | VARCHAR(150) |       Có | Chống Feedback trùng     |
+| `status`        | VARCHAR(20)  |       Có | Trạng thái               |
+| `read_flg`      | BOOLEAN      |       Có | Đã đọc hay chưa          |
+| `read_at`       | DATETIME     |    Không | Thời điểm đọc            |
+| `created_at`    | DATETIME     |       Có | Ngày tạo                 |
+| `updated_at`    | DATETIME     |       Có | Ngày cập nhật            |
+| `resolved_at`   | DATETIME     |    Không | Thời điểm hết bất thường |
+| `expires_at`    | DATETIME     |    Không | Thời điểm hết hạn        |
+
+## Category
+
+```text
+LOGIN
+WEIGHT
+SLEEP
+WATER
+STEP
+MEMO
+```
+
+## Level
+
+```text
+1 = Achievement / 達成
+2 = Advice / アドバイス
+3 = Warning / 注意
+4 = Critical / 重要
+```
+
+## Status
+
+```text
+ACTIVE
+READ
+RESOLVED
+EXPIRED
+```
+
+## Target type
+
+```text
+WEIGHT_LOG
+SLEEP_LOG
+WATER_LOG
+STEP_LOG
+MEMO_LOG
+DAILY_SUMMARY
+```
+
+`target_log_id` là liên kết đa hình nên không đặt Foreign Key trực tiếp tới một bảng cụ thể.
+
+## Dedupe key
+
+Ví dụ:
+
+```text
+profileId + ruleCode + targetDate
+```
+
+Kết quả:
+
+```text
+15_SLEEP_SHORT_3_DAYS_2026-07-10
+```
+
+Giúp hệ thống không tạo cùng một feedback nhiều lần.
+
+## SQL
+
+```sql
+CREATE TABLE health_feedbacks (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    profile_id BIGINT NOT NULL,
+
+    category VARCHAR(20) NOT NULL,
+    level TINYINT NOT NULL,
+
+    rule_code VARCHAR(50) NOT NULL,
+
+    title VARCHAR(100) NULL,
+    message TEXT NOT NULL,
+
+    target_date DATE NULL,
+    target_type VARCHAR(20) NULL,
+    target_log_id BIGINT NULL,
+
+    dedupe_key VARCHAR(150) NOT NULL,
+
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+
+    read_flg BOOLEAN NOT NULL DEFAULT FALSE,
+    read_at DATETIME NULL,
+
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+
+    resolved_at DATETIME NULL,
+    expires_at DATETIME NULL,
+
+    CONSTRAINT chk_feedback_level
+        CHECK (level BETWEEN 1 AND 4),
+
+    CONSTRAINT uk_feedback_dedupe
+        UNIQUE (dedupe_key),
+
+    CONSTRAINT fk_feedback_profile
+        FOREIGN KEY (profile_id)
+        REFERENCES profiles(id)
+        ON DELETE CASCADE
+);
+
+CREATE INDEX idx_feedback_profile_status
+ON health_feedbacks(profile_id, status, target_date);
+```
+
+---
+
+# 12. Bảng tổng hợp để đối chiếu nhanh
+
+| Bảng               | Cột nghiệp vụ quan trọng                    | Unique rule              |
+| ------------------ | ------------------------------------------- | ------------------------ |
+| `users`            | email, password_hash, timezone, locale      | `email`                  |
+| `auth_tokens`      | user_id, token_hash, token_type, expires_at | `token_hash`             |
+| `profiles`         | user_id, display_name, height, mục tiêu     | Không bắt buộc           |
+| `weight_logs`      | weight_kg, measured_at, BMI                 | Không unique theo ngày   |
+| `sleep_logs`       | start, end, duration, sleep_type            | Không unique theo ngày   |
+| `water_logs`       | drink_at, amount_ml, drink_type             | Không unique theo ngày   |
+| `step_logs`        | step_date, steps                            | `profile_id + step_date` |
+| `memo_logs`        | memo_datetime, content, category            | Không unique theo ngày   |
+| `health_feedbacks` | category, level, rule_code, message         | `dedupe_key`             |
+
+---
+
+# 13. Các cột tối thiểu cần kiểm tra trong bảng cũ
+
+## `users`
+
+```text
 id
-profile_id
-
-sleep_date
-
-sleep_start_datetime
-sleep_end_datetime
-
-duration_minutes
-
-sleep_type
-
-source
-
+email
+password_hash
+status
+locale
+timezone
 created_at
 updated_at
-Lv1: ngủ tốt / cải thiện
-Lv2: cần chú ý nhẹ
-Lv3: thiếu ngủ kéo dài
-Lv4: bất thường nghiêm trọng
+```
 
-Vấn đề 1: Một ngày uống nhiều lần thì lưu như thế nào?
-Đây chính là câu bạn bị hỏi.
-water_logs
-id profile_id drink_time amount_ml drink_type memo created_at
-Người review có thể hỏi
-Nếu một ngày nhập 20 lần thì sao?
-Trả lời:
-Không vấn đề gì. Vì mỗi lần uống nước là một bản ghi độc lập. Dashboard sẽ tính tổng lượng nước trong ngày bằng cách cộng tất cả các bản ghi của ngày đó.
-Đây là câu trả lời rất "đúng nghiệp vụ".
-💧 Lượng nước hằng ngày
-Lượng nước có thể đến từ:
-✅ Nước lọc
-✅ Trà không đường
-✅ Sữa
-✅ Canh
-✅ Nước từ rau và trái cây
-Lưu ý:
-Đây chỉ là hướng dẫn tham khảo.
-Nếu không chắc chắn, hãy nhập lượng nước uống trực tiếp.
-Dashboard:
-Today's drinks
-Water 1200ml
-Tea 300ml
-Milk 200ml
-Một ngày nhập bao nhiêu lần?
-Không giới hạn.
-Có nên cảnh báo khi uống quá nhiều?
-Ví dụ:
-7000ml mặc đinh 1 ngày nên uống 2000l
-Feedback:
-Hôm nay lượng nước của bạn khá cao. Vui lòng kiểm tra lại dữ liệu vừa nhập.
-Dashboard:
-██████████░░░░░
-1500 / 2000ml
-Feedback:
-Bạn chỉ còn 500ml nữa là đạt mục tiêu hôm nay.
-water_logs
-id profile_id drink_datetime amount_ml drink_type memo created_at
-Dashboard
-Hiển thị:
-Hôm nay
-Đã uống
-1450ml
-Mục tiêu
-2000ml
-Còn lại
-550ml
-Quy tắc nghiệp vụ
-Một lần uống = một bản ghi.
-Không giới hạn số lần nhập trong ngày.
-Dashboard dùng SUM(amount_ml) để tính tổng.
-Cho phép sửa và xóa từng lần uống.
-Có hướng dẫn ngay trên màn hình rằng lượng nước có thể đến từ nước lọc, trà, sữa, canh và các thực phẩm nhiều nước, nhưng người dùng tự quyết định lượng muốn ghi nhận, vì ứng dụng không tự động tính nước từ thực phẩm.
-Nếu bị senpai hỏi:
-"Tại sao em không chỉ lưu một record mỗi ngày?"
-Bạn có thể trả lời:
-"Trong thực tế, người dùng uống nước nhiều lần trong ngày và thường không biết tổng lượng ngay từ đầu. Vì vậy em thiết kế mỗi lần uống là một bản ghi riêng. Khi hiển thị Dashboard, hệ thống sẽ cộng tất cả lượng nước của ngày đó để ra tổng lượng nước hằng ngày. Thiết kế này cũng giúp người dùng dễ sửa hoặc xóa từng lần nhập mà không ảnh hưởng đến các lần khác."
+## `auth_tokens`
 
+```text
+id
+user_id
+token_hash
+token_type
+expires_at
+revoked_at
+created_at
+```
 
+## `profiles`
+
+```text
+id
+user_id
+display_name
+birth_date
+height_cm
+daily_water_goal_ml
+daily_step_goal
+created_at
+updated_at
+```
+
+## `weight_logs`
+
+```text
+id
+profile_id
+weight_kg
+measured_at
+created_at
+updated_at
+```
+
+## `sleep_logs`
+
+```text
+id
+profile_id
+sleep_date
+sleep_start_at
+sleep_end_at
+duration_minutes
+sleep_type
+created_at
+updated_at
+```
+
+## `water_logs`
+
+```text
+id
+profile_id
+drink_at
+amount_ml
+drink_type
+created_at
+updated_at
+```
+
+## `step_logs`
+
+```text
+id
+profile_id
+step_date
+steps
+created_at
+updated_at
+```
+
+## `memo_logs`
+
+```text
+id
+profile_id
+memo_datetime
+content
+created_at
+updated_at
+```
+
+## `health_feedbacks`
+
+```text
+id
+profile_id
+category
+level
+rule_code
+message
+target_date
+dedupe_key
+status
+read_flg
+created_at
+updated_at
+```
